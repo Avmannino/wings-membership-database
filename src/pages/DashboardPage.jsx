@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   Clock3,
   UserCheck,
+  UserPlus,
   Users,
 } from "lucide-react";
 
@@ -11,6 +12,8 @@ import {
   useEffect,
   useState,
 } from "react";
+
+import { useMembersRefresh } from "../contexts/membersRefreshContext";
 
 import {
   getCheckIns,
@@ -36,6 +39,11 @@ function DashboardPage() {
 
   const [error, setError] =
     useState("");
+
+  const {
+    membersVersion,
+    openAddMember,
+  } = useMembersRefresh();
 
   const loadDashboard = useCallback(
     async () => {
@@ -71,7 +79,7 @@ function DashboardPage() {
 
   useEffect(() => {
     loadDashboard();
-  }, [loadDashboard]);
+  }, [loadDashboard, membersVersion]);
 
   const activeMembers =
     members.filter(
@@ -105,7 +113,7 @@ function DashboardPage() {
 
   return (
     <div className="page">
-      <header className="page-header">
+      <header className="page-header page-header-actions">
         <div>
           <span className="eyebrow">
             Wings Arena
@@ -120,6 +128,15 @@ function DashboardPage() {
             recent check-ins.
           </p>
         </div>
+
+        <button
+          type="button"
+          className="primary-button page-add-member"
+          onClick={openAddMember}
+        >
+          <UserPlus size={20} />
+          Add Member
+        </button>
       </header>
 
       {error && (

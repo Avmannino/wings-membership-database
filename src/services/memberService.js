@@ -104,6 +104,12 @@ function normalizeMemberData(
       memberData.firstName.trim(),
     lastName:
       memberData.lastName.trim(),
+    email:
+      memberData.email?.trim() ||
+      "",
+    phone:
+      memberData.phone?.trim() ||
+      "",
     membershipType,
     startDate:
       memberData.startDate || "",

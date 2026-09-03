@@ -3,6 +3,7 @@ import {
   CalendarDays,
   CheckCircle2,
   ScanLine,
+  UserPlus,
   UserRound,
   Users,
   UserX,
@@ -15,6 +16,8 @@ import {
   useRef,
   useState,
 } from "react";
+
+import { useMembersRefresh } from "../contexts/membersRefreshContext";
 
 import useBarcodeScanner from "../hooks/useBarcodeScanner";
 
@@ -39,6 +42,9 @@ function CheckInPage() {
     useState(false);
 
   const processingRef = useRef(false);
+
+  const { openAddMember } =
+    useMembersRefresh();
 
   const closeResult = useCallback(() => {
     setResult(null);
@@ -527,9 +533,20 @@ function CheckInPage() {
           </h2>
         </div>
 
-        <div className="check-in-status-dot">
-          <span />
-          Firebase Connected
+        <div className="check-in-topbar-actions">
+          <div className="check-in-status-dot">
+            <span />
+            Firebase Connected
+          </div>
+
+          <button
+            type="button"
+            className="primary-button check-in-add-member"
+            onClick={openAddMember}
+          >
+            <UserPlus size={20} />
+            Add Member
+          </button>
         </div>
       </div>
 

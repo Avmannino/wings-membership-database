@@ -10,6 +10,8 @@ import {
   X,
 } from "lucide-react";
 
+import SendPassMenu from "./SendPassMenu";
+
 import { generateMemberToken } from "../utils/tokenUtils";
 
 const emptyFamilyMember = {
@@ -20,6 +22,8 @@ const emptyFamilyMember = {
 const emptyForm = {
   firstName: "",
   lastName: "",
+  email: "",
+  phone: "",
   membershipType: "Individual",
   startDate: "",
   expirationDate: "",
@@ -49,6 +53,10 @@ function MemberFormModal({
           member.firstName || "",
         lastName:
           member.lastName || "",
+        email:
+          member.email || "",
+        phone:
+          member.phone || "",
         membershipType:
           member.membershipType ||
           "Individual",
@@ -267,6 +275,34 @@ function MemberFormModal({
                 onChange={handleChange}
                 disabled={submitting}
                 required
+              />
+            </label>
+
+            <label className="form-field">
+              <span>Email</span>
+
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                disabled={submitting}
+                placeholder="member@example.com"
+              />
+            </label>
+
+            <label className="form-field">
+              <span>
+                Phone Number
+              </span>
+
+              <input
+                type="tel"
+                name="phone"
+                value={form.phone}
+                onChange={handleChange}
+                disabled={submitting}
+                placeholder="(555) 555-5555"
               />
             </label>
 
@@ -492,6 +528,10 @@ function MemberFormModal({
                   Generate
                 </button>
               </div>
+
+              <SendPassMenu
+                member={form}
+              />
             </div>
 
             <label className="form-field form-field-full">

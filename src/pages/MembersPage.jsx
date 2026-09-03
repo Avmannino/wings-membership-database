@@ -1,9 +1,9 @@
 import {
   CreditCard,
   Edit3,
-  Plus,
   Search,
   Trash2,
+  UserPlus,
 } from "lucide-react";
 
 import {
@@ -16,9 +16,11 @@ import {
 import MemberFormModal from "../components/MemberFormModal";
 import MemberPassModal from "../components/MemberPassModal";
 import MembershipBadge from "../components/MembershipBadge";
+import SendPassMenu from "../components/SendPassMenu";
+
+import { useMembersRefresh } from "../contexts/membersRefreshContext";
 
 import {
-  addMember,
   deleteMember,
   getMembers,
   updateMember,
@@ -52,10 +54,11 @@ function MembersPage() {
     setPassMember,
   ] = useState(null);
 
-  const [
-    showAddMember,
-    setShowAddMember,
-  ] = useState(false);
+  const {
+    membersVersion,
+    notifyMembersChanged,
+    openAddMember,
+  } = useMembersRefresh();
 
   const loadMembers = useCallback(
     async () => {
@@ -85,7 +88,7 @@ function MembersPage() {
 
   useEffect(() => {
     loadMembers();
-  }, [loadMembers]);
+  }, [loadMembers, membersVersion]);
 
   const filteredMembers =
     useMemo(() => {
@@ -115,31 +118,6 @@ function MembersPage() {
       );
     }, [members, search]);
 
-  async function handleAddMember(
-    form
-  ) {
-    setError("");
-
-    try {
-      await addMember(form);
-      await loadMembers();
-
-      setShowAddMember(false);
-    } catch (saveError) {
-      console.error(
-        "Unable to add member:",
-        saveError
-      );
-
-      setError(
-        saveError.message ||
-          "Unable to add member."
-      );
-
-      throw saveError;
-    }
-  }
-
   async function handleEditMember(
     form
   ) {
@@ -153,6 +131,7 @@ function MembersPage() {
 
       await loadMembers();
 
+      notifyMembersChanged();
       setEditingMember(null);
     } catch (saveError) {
       console.error(
@@ -186,6 +165,8 @@ function MembersPage() {
     try {
       await deleteMember(member.id);
       await loadMembers();
+
+      notifyMembersChanged();
     } catch (deleteError) {
       console.error(
         "Unable to delete member:",
@@ -216,12 +197,10 @@ function MembersPage() {
 
         <button
           type="button"
-          className="primary-button"
-          onClick={() =>
-            setShowAddMember(true)
-          }
+          className="primary-button page-add-member"
+          onClick={openAddMember}
         >
-          <Plus size={18} />
+          <UserPlus size={20} />
           Add Member
         </button>
       </header>
@@ -375,6 +354,11 @@ function MembersPage() {
                             />
                           </button>
 
+                          <SendPassMenu
+                            member={member}
+                            compact
+                          />
+
                           <button
                             type="button"
                             className="icon-button"
@@ -428,16 +412,6 @@ function MembersPage() {
           </table>
         </div>
       </section>
-
-      {showAddMember && (
-        <MemberFormModal
-          member={null}
-          onClose={() =>
-            setShowAddMember(false)
-          }
-          onSave={handleAddMember}
-        />
-      )}
 
       {editingMember && (
         <MemberFormModal

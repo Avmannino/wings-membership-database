@@ -102,6 +102,22 @@ a:focus-visible {
   font-size: 12px;
 }
 
+/*
+  Adding a member sits in the top right of every
+  page, sized to read as the primary action.
+*/
+.page-add-member,
+.check-in-add-member {
+  flex: 0 0 auto;
+  min-height: 50px;
+  padding: 0 22px;
+  gap: 10px;
+  border-radius: 12px;
+  font-size: 15px;
+  letter-spacing: 0.2px;
+  box-shadow: 0 6px 18px rgba(8, 20, 40, 0.18);
+}
+
 .sidebar-nav {
   display: flex;
   flex-direction: column;
@@ -272,6 +288,12 @@ a:focus-visible {
   margin: 1px 0 0;
   font-size: 18px;
   color: #192a43;
+}
+
+.check-in-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
 }
 
 .check-in-status-dot {
@@ -1098,6 +1120,79 @@ a:focus-visible {
   min-width: 115px;
 }
 
+.send-pass-section {
+  position: relative;
+  margin-top: 10px;
+}
+
+/*
+  Inside a table row the menu has no room to push
+  content down, so it floats above the row instead.
+*/
+.row-actions .send-pass-section {
+  margin-top: 0;
+}
+
+.send-pass-options-floating {
+  position: fixed;
+  z-index: 120;
+  flex-wrap: nowrap;
+  flex-direction: column;
+  min-width: 150px;
+  margin-top: 0;
+  background: white;
+  box-shadow: 0 14px 34px rgba(17, 33, 56, 0.16);
+}
+
+.send-pass-options-floating .send-pass-option {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.send-pass-toggle {
+  width: fit-content;
+}
+
+.send-pass-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid #e2e7ee;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.send-pass-option {
+  min-height: 38px;
+  font-size: 12px;
+}
+
+.send-pass-option:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.send-pass-notice {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #4c5a6f;
+}
+
+/*
+  Rendered only so the print view has a QR to
+  copy; never shown inside the form itself.
+*/
+.send-pass-qr-source {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .modal-actions {
   padding: 17px 24px;
   display: flex;
@@ -1205,6 +1300,12 @@ a:focus-visible {
       0 4px 14px;
   }
 
+  .page-add-member,
+  .check-in-add-member {
+    min-height: 46px;
+    font-size: 14px;
+  }
+
   .sidebar-nav {
     flex-direction: row;
     overflow-x: auto;
@@ -1254,6 +1355,11 @@ a:focus-visible {
   .check-in-topbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .check-in-topbar-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .check-in-stage {
