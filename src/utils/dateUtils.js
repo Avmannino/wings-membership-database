@@ -18,14 +18,6 @@ export function getMembershipState(member) {
     return "not_found";
   }
 
-  if (member.status === "suspended") {
-    return "suspended";
-  }
-
-  if (member.status === "inactive") {
-    return "inactive";
-  }
-
   const expirationDate = parseDateOnly(member.expirationDate);
 
   if (!expirationDate) {

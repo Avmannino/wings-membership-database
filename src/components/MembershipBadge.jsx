@@ -6,8 +6,6 @@ function MembershipBadge({ member }) {
   const labels = {
     active: "Active",
     expired: "Expired",
-    suspended: "Suspended",
-    inactive: "Inactive",
   };
 
   return (

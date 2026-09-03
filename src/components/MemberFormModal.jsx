@@ -23,7 +23,6 @@ const emptyForm = {
   membershipType: "Individual",
   startDate: "",
   expirationDate: "",
-  status: "active",
   qrToken: "",
   notes: "",
   familyMembers: [],
@@ -57,8 +56,6 @@ function MemberFormModal({
           member.startDate || "",
         expirationDate:
           member.expirationDate || "",
-        status:
-          member.status || "active",
         qrToken:
           member.qrToken || "",
         notes:
@@ -290,29 +287,6 @@ function MemberFormModal({
 
                 <option value="Family">
                   Family
-                </option>
-              </select>
-            </label>
-
-            <label className="form-field">
-              <span>Status</span>
-
-              <select
-                name="status"
-                value={form.status}
-                onChange={handleChange}
-                disabled={submitting}
-              >
-                <option value="active">
-                  Active
-                </option>
-
-                <option value="suspended">
-                  Suspended
-                </option>
-
-                <option value="inactive">
-                  Inactive
                 </option>
               </select>
             </label>

@@ -109,9 +109,6 @@ function normalizeMemberData(
       memberData.startDate || "",
     expirationDate:
       memberData.expirationDate,
-    status:
-      memberData.status ||
-      "active",
     qrToken:
       memberData.qrToken
         .trim()

@@ -3,7 +3,6 @@ import {
   CalendarDays,
   CheckCircle2,
   ScanLine,
-  ShieldX,
   UserRound,
   Users,
   UserX,
@@ -230,13 +229,11 @@ function CheckInPage() {
             </span>
 
             <strong className="scan-status-value">
-              {result?.type ===
-              "active"
+              {getMembershipState(
+                member
+              ) === "active"
                 ? "Active"
-                : result?.type ===
-                    "expired"
-                  ? "Expired"
-                  : member.status}
+                : "Expired"}
             </strong>
           </div>
 
@@ -436,55 +433,6 @@ function CheckInPage() {
               This membership must be
               renewed before check-in.
             </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (
-      result.type === "suspended" ||
-      result.type === "inactive"
-    ) {
-      return (
-        <div className="scan-result-backdrop">
-          <div className="scan-result-modal scan-result-error">
-            <button
-              type="button"
-              className="scan-result-close"
-              onClick={closeResult}
-              aria-label="Close check-in result"
-            >
-              <X size={22} />
-            </button>
-
-            <div className="scan-result-header">
-              <div className="scan-result-icon">
-                <ShieldX
-                  size={56}
-                  strokeWidth={2}
-                />
-              </div>
-
-              <div>
-                <span className="scan-result-eyebrow">
-                  Check-In Denied
-                </span>
-
-                <h2>
-                  Membership
-                  Unavailable
-                </h2>
-
-                <p>
-                  Please see the front
-                  desk.
-                </p>
-              </div>
-            </div>
-
-            {renderMemberInformation(
-              result.member
-            )}
           </div>
         </div>
       );
