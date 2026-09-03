@@ -12,7 +12,6 @@ import {
 
 import {
   useCallback,
-  useEffect,
   useRef,
   useState,
 } from "react";
@@ -39,36 +38,24 @@ function CheckInPage() {
   const [processing, setProcessing] =
     useState(false);
 
-  const resetTimerRef = useRef(null);
   const processingRef = useRef(false);
 
   const closeResult = useCallback(() => {
-    if (resetTimerRef.current) {
-      clearTimeout(
-        resetTimerRef.current
-      );
-
-      resetTimerRef.current = null;
-    }
-
     setResult(null);
   }, []);
 
-  const scheduleReset = useCallback(() => {
-    if (resetTimerRef.current) {
-      clearTimeout(
-        resetTimerRef.current
-      );
+  /*
+    The result stays on screen until staff dismiss
+    it, either with the close button or by clicking
+    the backdrop outside the modal.
+  */
+  function handleBackdropClick(event) {
+    if (
+      event.target === event.currentTarget
+    ) {
+      closeResult();
     }
-
-    resetTimerRef.current = setTimeout(
-      () => {
-        setResult(null);
-        resetTimerRef.current = null;
-      },
-      5000
-    );
-  }, []);
+  }
 
   const handleScan = useCallback(
     async (rawCode) => {
@@ -87,13 +74,12 @@ function CheckInPage() {
       processingRef.current = true;
       setProcessing(true);
 
-      if (resetTimerRef.current) {
-        clearTimeout(
-          resetTimerRef.current
-        );
-
-        resetTimerRef.current = null;
-      }
+      /*
+        A scan can land while the cursor sits in the
+        manual test field, so clear anything the
+        scanner leaked into it.
+      */
+      setManualCode("");
 
       try {
         const member =
@@ -111,8 +97,6 @@ function CheckInPage() {
             type: "not_found",
             qrToken,
           });
-
-          scheduleReset();
 
           return;
         }
@@ -134,8 +118,6 @@ function CheckInPage() {
           type: membershipState,
           member,
         });
-
-        scheduleReset();
       } catch (error) {
         console.error(
           "Check-in failed:",
@@ -145,27 +127,15 @@ function CheckInPage() {
         setResult({
           type: "system_error",
         });
-
-        scheduleReset();
       } finally {
         processingRef.current = false;
         setProcessing(false);
       }
     },
-    [scheduleReset]
+    []
   );
 
   useBarcodeScanner(handleScan);
-
-  useEffect(() => {
-    return () => {
-      if (resetTimerRef.current) {
-        clearTimeout(
-          resetTimerRef.current
-        );
-      }
-    };
-  }, []);
 
   async function handleManualSubmit(
     event
@@ -339,7 +309,10 @@ function CheckInPage() {
 
     if (result.type === "active") {
       return (
-        <div className="scan-result-backdrop">
+        <div
+          className="scan-result-backdrop"
+          onClick={handleBackdropClick}
+        >
           <div className="scan-result-modal scan-result-success">
             <button
               type="button"
@@ -390,7 +363,10 @@ function CheckInPage() {
 
     if (result.type === "expired") {
       return (
-        <div className="scan-result-backdrop">
+        <div
+          className="scan-result-backdrop"
+          onClick={handleBackdropClick}
+        >
           <div className="scan-result-modal scan-result-error">
             <button
               type="button"
@@ -442,7 +418,10 @@ function CheckInPage() {
       result.type === "system_error"
     ) {
       return (
-        <div className="scan-result-backdrop">
+        <div
+          className="scan-result-backdrop"
+          onClick={handleBackdropClick}
+        >
           <div className="scan-result-modal scan-result-error">
             <button
               type="button"
@@ -483,7 +462,10 @@ function CheckInPage() {
     }
 
     return (
-      <div className="scan-result-backdrop">
+      <div
+          className="scan-result-backdrop"
+          onClick={handleBackdropClick}
+        >
         <div className="scan-result-modal scan-result-error">
           <button
             type="button"

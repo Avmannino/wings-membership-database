@@ -10,11 +10,13 @@ export default function useBarcodeScanner(
     minimumLength = 3,
     maximumDelay = 500,
     idleSubmitDelay = 120,
+    scannerMaxGap = 35,
   } = {}
 ) {
   const bufferRef = useRef("");
   const lastKeyTimeRef = useRef(0);
   const submitTimerRef = useRef(null);
+  const fastKeyCountRef = useRef(0);
 
   useEffect(() => {
     if (!enabled) {
@@ -34,27 +36,48 @@ export default function useBarcodeScanner(
     function resetScanner() {
       bufferRef.current = "";
       lastKeyTimeRef.current = 0;
+      fastKeyCountRef.current = 0;
 
       clearSubmitTimer();
+    }
+
+    /*
+      A hardware scanner types far faster than a
+      person can. Treat the buffer as a scan only
+      when most of the gaps between keys were too
+      short to be human.
+    */
+    function looksLikeScan() {
+      const length =
+        bufferRef.current.length;
+
+      if (length < minimumLength) {
+        return false;
+      }
+
+      const gaps = length - 1;
+
+      if (gaps < 1) {
+        return false;
+      }
+
+      return (
+        fastKeyCountRef.current >=
+        Math.ceil(gaps * 0.7)
+      );
     }
 
     function submitScan() {
       const scannedValue =
         bufferRef.current.trim();
 
-      if (
-        scannedValue.length >=
-        minimumLength
-      ) {
-        console.log(
-          "Barcode scanner detected:",
-          scannedValue
-        );
-
-        onScan(scannedValue);
-      }
+      const wasScan = looksLikeScan();
 
       resetScanner();
+
+      if (wasScan) {
+        onScan(scannedValue);
+      }
     }
 
     function scheduleAutomaticSubmit() {
@@ -75,28 +98,6 @@ export default function useBarcodeScanner(
         return;
       }
 
-      const target = event.target;
-
-      const isTypingField =
-        target instanceof HTMLElement &&
-        (
-          target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.tagName === "SELECT" ||
-          target.isContentEditable
-        );
-
-      /*
-        If the user is manually typing into a form,
-        let the form behave normally.
-
-        The barcode scanner listener will handle
-        scans when the regular page/body has focus.
-      */
-      if (isTypingField) {
-        return;
-      }
-
       const currentTime = Date.now();
 
       /*
@@ -107,9 +108,12 @@ export default function useBarcodeScanner(
         event.key === "Enter" ||
         event.key === "Tab"
       ) {
-        if (bufferRef.current) {
+        if (looksLikeScan()) {
           event.preventDefault();
+          event.stopPropagation();
           submitScan();
+        } else {
+          resetScanner();
         }
 
         return;
@@ -122,17 +126,25 @@ export default function useBarcodeScanner(
         return;
       }
 
+      const gap =
+        currentTime -
+        lastKeyTimeRef.current;
+
       /*
         If there was a very long pause between
         characters, assume this is a new scan.
       */
       if (
         lastKeyTimeRef.current &&
-        currentTime -
-          lastKeyTimeRef.current >
-          maximumDelay
+        gap > maximumDelay
       ) {
         bufferRef.current = "";
+        fastKeyCountRef.current = 0;
+      } else if (
+        lastKeyTimeRef.current &&
+        gap <= scannerMaxGap
+      ) {
+        fastKeyCountRef.current += 1;
       }
 
       bufferRef.current +=
@@ -140,6 +152,17 @@ export default function useBarcodeScanner(
 
       lastKeyTimeRef.current =
         currentTime;
+
+      /*
+        Once the burst is clearly machine-speed,
+        keep the remaining characters out of any
+        focused input so a scan works no matter
+        where the cursor happens to be.
+      */
+      if (looksLikeScan()) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
 
       /*
         This allows scanners that do NOT send
@@ -172,5 +195,6 @@ export default function useBarcodeScanner(
     maximumDelay,
     minimumLength,
     onScan,
+    scannerMaxGap,
   ]);
 }
