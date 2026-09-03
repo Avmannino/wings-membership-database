@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 
 import {
+  useCallback,
+  useEffect,
   useMemo,
   useState,
 } from "react";
@@ -28,68 +30,172 @@ import {
 } from "../utils/dateUtils";
 
 function MembersPage() {
-  const [members, setMembers] = useState(
-    getMembers()
+  const [members, setMembers] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
+
+  const [search, setSearch] =
+    useState("");
+
+  const [
+    editingMember,
+    setEditingMember,
+  ] = useState(null);
+
+  const [
+    passMember,
+    setPassMember,
+  ] = useState(null);
+
+  const [
+    showAddMember,
+    setShowAddMember,
+  ] = useState(false);
+
+  const loadMembers = useCallback(
+    async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const results =
+          await getMembers();
+
+        setMembers(results);
+      } catch (loadError) {
+        console.error(
+          "Unable to load members:",
+          loadError
+        );
+
+        setError(
+          "Unable to load members from Firebase."
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
   );
 
-  const [search, setSearch] = useState("");
-  const [editingMember, setEditingMember] =
-    useState(null);
+  useEffect(() => {
+    loadMembers();
+  }, [loadMembers]);
 
-  const [passMember, setPassMember] =
-    useState(null);
-
-  const [showAddMember, setShowAddMember] =
-    useState(false);
-
-  const filteredMembers = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    if (!query) {
-      return members;
-    }
-
-    return members.filter((member) => {
-      const searchableValue = [
-        member.firstName,
-        member.lastName,
-        member.membershipType,
-        member.qrToken,
-      ]
-        .join(" ")
+  const filteredMembers =
+    useMemo(() => {
+      const query = search
+        .trim()
         .toLowerCase();
 
-      return searchableValue.includes(query);
-    });
-  }, [members, search]);
+      if (!query) {
+        return members;
+      }
 
-  function refreshMembers() {
-    setMembers(getMembers());
+      return members.filter(
+        (member) => {
+          const searchableValue = [
+            member.firstName,
+            member.lastName,
+            member.membershipType,
+            member.qrToken,
+          ]
+            .join(" ")
+            .toLowerCase();
+
+          return searchableValue.includes(
+            query
+          );
+        }
+      );
+    }, [members, search]);
+
+  async function handleAddMember(
+    form
+  ) {
+    setError("");
+
+    try {
+      await addMember(form);
+      await loadMembers();
+
+      setShowAddMember(false);
+    } catch (saveError) {
+      console.error(
+        "Unable to add member:",
+        saveError
+      );
+
+      setError(
+        saveError.message ||
+          "Unable to add member."
+      );
+
+      throw saveError;
+    }
   }
 
-  function handleAddMember(form) {
-    addMember(form);
-    refreshMembers();
-    setShowAddMember(false);
+  async function handleEditMember(
+    form
+  ) {
+    setError("");
+
+    try {
+      await updateMember(
+        editingMember.id,
+        form
+      );
+
+      await loadMembers();
+
+      setEditingMember(null);
+    } catch (saveError) {
+      console.error(
+        "Unable to update member:",
+        saveError
+      );
+
+      setError(
+        saveError.message ||
+          "Unable to update member."
+      );
+
+      throw saveError;
+    }
   }
 
-  function handleEditMember(form) {
-    updateMember(editingMember.id, form);
-    refreshMembers();
-    setEditingMember(null);
-  }
-
-  function handleDelete(member) {
-    const confirmed = window.confirm(
-      `Delete ${member.firstName} ${member.lastName}?`
-    );
+  async function handleDelete(
+    member
+  ) {
+    const confirmed =
+      window.confirm(
+        `Delete ${member.firstName} ${member.lastName}?`
+      );
 
     if (!confirmed) {
       return;
     }
 
-    deleteMember(member.id);
-    refreshMembers();
+    setError("");
+
+    try {
+      await deleteMember(member.id);
+      await loadMembers();
+    } catch (deleteError) {
+      console.error(
+        "Unable to delete member:",
+        deleteError
+      );
+
+      setError(
+        "Unable to delete this member."
+      );
+    }
   }
 
   return (
@@ -103,20 +209,37 @@ function MembersPage() {
           <h1>Members</h1>
 
           <p>
-            Manage membership status, expiration
-            dates and passes.
+            Manage membership status,
+            expiration dates and passes.
           </p>
         </div>
 
         <button
           type="button"
           className="primary-button"
-          onClick={() => setShowAddMember(true)}
+          onClick={() =>
+            setShowAddMember(true)
+          }
         >
           <Plus size={18} />
           Add Member
         </button>
       </header>
+
+      {error && (
+        <div
+          style={{
+            padding: "14px 16px",
+            marginBottom: "20px",
+            borderRadius: "10px",
+            background: "#fff0f0",
+            color: "#a62e2e",
+            fontSize: "13px",
+          }}
+        >
+          {error}
+        </div>
+      )}
 
       <section className="content-card">
         <div className="member-toolbar">
@@ -126,17 +249,23 @@ function MembersPage() {
             <input
               value={search}
               onChange={(event) =>
-                setSearch(event.target.value)
+                setSearch(
+                  event.target.value
+                )
               }
               placeholder="Search members..."
             />
           </div>
 
           <div className="member-count">
-            {filteredMembers.length}{" "}
-            {filteredMembers.length === 1
-              ? "member"
-              : "members"}
+            {loading
+              ? "Loading..."
+              : `${filteredMembers.length} ${
+                  filteredMembers.length ===
+                  1
+                    ? "member"
+                    : "members"
+                }`}
           </div>
         </div>
 
@@ -154,103 +283,147 @@ function MembersPage() {
             </thead>
 
             <tbody>
-              {filteredMembers.map((member) => (
-                <tr key={member.id}>
-                  <td>
-                    <div className="member-name-cell">
-                      <div className="member-avatar">
-                        {member.firstName
-                          .charAt(0)
-                          .toUpperCase()}
-                        {member.lastName
-                          .charAt(0)
-                          .toUpperCase()}
-                      </div>
-
-                      <div>
-                        <strong>
-                          {member.firstName}{" "}
-                          {member.lastName}
-                        </strong>
-
-                        {isExpiringSoon(member) && (
-                          <span className="expiring-label">
-                            Expiring Soon
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-
-                  <td>{member.membershipType}</td>
-
-                  <td>
-                    <MembershipBadge
-                      member={member}
-                    />
-                  </td>
-
-                  <td>
-                    {formatDate(
-                      member.expirationDate
-                    )}
-                  </td>
-
-                  <td>
-                    <code className="qr-token">
-                      {member.qrToken}
-                    </code>
-                  </td>
-
-                  <td>
-                    <div className="row-actions">
-                      <button
-                        type="button"
-                        className="icon-button"
-                        title="Membership pass"
-                        onClick={() =>
-                          setPassMember(member)
-                        }
-                      >
-                        <CreditCard size={18} />
-                      </button>
-
-                      <button
-                        type="button"
-                        className="icon-button"
-                        title="Edit member"
-                        onClick={() =>
-                          setEditingMember(member)
-                        }
-                      >
-                        <Edit3 size={18} />
-                      </button>
-
-                      <button
-                        type="button"
-                        className="icon-button danger"
-                        title="Delete member"
-                        onClick={() =>
-                          handleDelete(member)
-                        }
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-
-              {filteredMembers.length === 0 && (
+              {loading && (
                 <tr>
                   <td
                     colSpan="6"
                     className="empty-table-cell"
                   >
-                    No members match your search.
+                    Loading members from
+                    Firebase...
                   </td>
                 </tr>
               )}
+
+              {!loading &&
+                filteredMembers.map(
+                  (member) => (
+                    <tr
+                      key={member.id}
+                    >
+                      <td>
+                        <div className="member-name-cell">
+                          <div className="member-avatar">
+                            {member.firstName
+                              .charAt(0)
+                              .toUpperCase()}
+                            {member.lastName
+                              .charAt(0)
+                              .toUpperCase()}
+                          </div>
+
+                          <div>
+                            <strong>
+                              {
+                                member.firstName
+                              }{" "}
+                              {
+                                member.lastName
+                              }
+                            </strong>
+
+                            {isExpiringSoon(
+                              member
+                            ) && (
+                              <span className="expiring-label">
+                                Expiring
+                                Soon
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      <td>
+                        {
+                          member.membershipType
+                        }
+                      </td>
+
+                      <td>
+                        <MembershipBadge
+                          member={member}
+                        />
+                      </td>
+
+                      <td>
+                        {formatDate(
+                          member.expirationDate
+                        )}
+                      </td>
+
+                      <td>
+                        <code className="qr-token">
+                          {member.qrToken}
+                        </code>
+                      </td>
+
+                      <td>
+                        <div className="row-actions">
+                          <button
+                            type="button"
+                            className="icon-button"
+                            title="Membership pass"
+                            onClick={() =>
+                              setPassMember(
+                                member
+                              )
+                            }
+                          >
+                            <CreditCard
+                              size={18}
+                            />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="icon-button"
+                            title="Edit member"
+                            onClick={() =>
+                              setEditingMember(
+                                member
+                              )
+                            }
+                          >
+                            <Edit3
+                              size={18}
+                            />
+                          </button>
+
+                          <button
+                            type="button"
+                            className="icon-button danger"
+                            title="Delete member"
+                            onClick={() =>
+                              handleDelete(
+                                member
+                              )
+                            }
+                          >
+                            <Trash2
+                              size={18}
+                            />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                )}
+
+              {!loading &&
+                filteredMembers.length ===
+                  0 && (
+                  <tr>
+                    <td
+                      colSpan="6"
+                      className="empty-table-cell"
+                    >
+                      {search
+                        ? "No members match your search."
+                        : "No members have been added yet."}
+                    </td>
+                  </tr>
+                )}
             </tbody>
           </table>
         </div>
@@ -259,7 +432,9 @@ function MembersPage() {
       {showAddMember && (
         <MemberFormModal
           member={null}
-          onClose={() => setShowAddMember(false)}
+          onClose={() =>
+            setShowAddMember(false)
+          }
           onSave={handleAddMember}
         />
       )}
@@ -267,15 +442,21 @@ function MembersPage() {
       {editingMember && (
         <MemberFormModal
           member={editingMember}
-          onClose={() => setEditingMember(null)}
-          onSave={handleEditMember}
+          onClose={() =>
+            setEditingMember(null)
+          }
+          onSave={
+            handleEditMember
+          }
         />
       )}
 
       {passMember && (
         <MemberPassModal
           member={passMember}
-          onClose={() => setPassMember(null)}
+          onClose={() =>
+            setPassMember(null)
+          }
         />
       )}
     </div>

@@ -1,9 +1,14 @@
 import {
   AlertTriangle,
+  CalendarDays,
   CheckCircle2,
   ScanLine,
   ShieldX,
+  UserRound,
+  Users,
   UserX,
+  WifiOff,
+  X,
 } from "lucide-react";
 
 import {
@@ -26,130 +31,361 @@ import {
 } from "../utils/dateUtils";
 
 function CheckInPage() {
-  const [result, setResult] = useState(null);
-  const [manualCode, setManualCode] = useState("");
+  const [result, setResult] =
+    useState(null);
+
+  const [manualCode, setManualCode] =
+    useState("");
+
+  const [processing, setProcessing] =
+    useState(false);
+
   const resetTimerRef = useRef(null);
+  const processingRef = useRef(false);
 
-  const handleScan = useCallback((rawCode) => {
-    const qrToken = rawCode.trim().toUpperCase();
-
-    if (!qrToken) {
-      return;
-    }
-
+  const closeResult = useCallback(() => {
     if (resetTimerRef.current) {
-      clearTimeout(resetTimerRef.current);
+      clearTimeout(
+        resetTimerRef.current
+      );
+
+      resetTimerRef.current = null;
     }
 
-    const member = getMemberByQrToken(qrToken);
-
-    if (!member) {
-      recordCheckIn({
-        qrToken,
-        result: "not_found",
-      });
-
-      setResult({
-        type: "not_found",
-        qrToken,
-      });
-
-      resetTimerRef.current = setTimeout(() => {
-        setResult(null);
-      }, 3500);
-
-      return;
-    }
-
-    const membershipState =
-      getMembershipState(member);
-
-    recordCheckIn({
-      memberId: member.id,
-      qrToken,
-      result: membershipState,
-    });
-
-    setResult({
-      type: membershipState,
-      member,
-    });
-
-    resetTimerRef.current = setTimeout(() => {
-      setResult(null);
-    }, 3500);
+    setResult(null);
   }, []);
+
+  const scheduleReset = useCallback(() => {
+    if (resetTimerRef.current) {
+      clearTimeout(
+        resetTimerRef.current
+      );
+    }
+
+    resetTimerRef.current = setTimeout(
+      () => {
+        setResult(null);
+        resetTimerRef.current = null;
+      },
+      5000
+    );
+  }, []);
+
+  const handleScan = useCallback(
+    async (rawCode) => {
+      if (processingRef.current) {
+        return;
+      }
+
+      const qrToken = rawCode
+        .trim()
+        .toUpperCase();
+
+      if (!qrToken) {
+        return;
+      }
+
+      processingRef.current = true;
+      setProcessing(true);
+
+      if (resetTimerRef.current) {
+        clearTimeout(
+          resetTimerRef.current
+        );
+
+        resetTimerRef.current = null;
+      }
+
+      try {
+        const member =
+          await getMemberByQrToken(
+            qrToken
+          );
+
+        if (!member) {
+          await recordCheckIn({
+            qrToken,
+            result: "not_found",
+          });
+
+          setResult({
+            type: "not_found",
+            qrToken,
+          });
+
+          scheduleReset();
+
+          return;
+        }
+
+        const membershipState =
+          getMembershipState(member);
+
+        await recordCheckIn({
+          memberId: member.id,
+          qrToken,
+          result: membershipState,
+          memberName:
+            `${member.firstName} ${member.lastName}`,
+          membershipType:
+            member.membershipType,
+        });
+
+        setResult({
+          type: membershipState,
+          member,
+        });
+
+        scheduleReset();
+      } catch (error) {
+        console.error(
+          "Check-in failed:",
+          error
+        );
+
+        setResult({
+          type: "system_error",
+        });
+
+        scheduleReset();
+      } finally {
+        processingRef.current = false;
+        setProcessing(false);
+      }
+    },
+    [scheduleReset]
+  );
 
   useBarcodeScanner(handleScan);
 
   useEffect(() => {
     return () => {
       if (resetTimerRef.current) {
-        clearTimeout(resetTimerRef.current);
+        clearTimeout(
+          resetTimerRef.current
+        );
       }
     };
   }, []);
 
-  function handleManualSubmit(event) {
+  async function handleManualSubmit(
+    event
+  ) {
     event.preventDefault();
 
-    handleScan(manualCode);
+    const code = manualCode;
+
     setManualCode("");
+
+    await handleScan(code);
   }
 
-  function renderResult() {
-    if (!result) {
-      return (
-        <div className="check-in-idle">
-          <div className="scan-icon">
-            <ScanLine size={72} strokeWidth={1.5} />
+  function renderMemberInformation(
+    member
+  ) {
+    if (!member) {
+      return null;
+    }
+
+    const familyMembers =
+      Array.isArray(
+        member.familyMembers
+      )
+        ? member.familyMembers
+        : [];
+
+    return (
+      <div className="scan-member-information">
+        <div className="scan-member-name-block">
+          <div className="scan-member-avatar">
+            <UserRound size={28} />
           </div>
 
-          <h1>Member Check-In</h1>
+          <div>
+            <span className="scan-info-label">
+              Member
+            </span>
 
-          <p>
-            Scan your Wings Arena membership pass.
-          </p>
-
-          <div className="scanner-ready">
-            Scanner Ready
+            <h3>
+              {member.firstName}{" "}
+              {member.lastName}
+            </h3>
           </div>
         </div>
-      );
+
+        <div className="scan-info-grid">
+          <div className="scan-info-item">
+            <span className="scan-info-label">
+              Membership
+            </span>
+
+            <strong>
+              {member.membershipType}
+            </strong>
+          </div>
+
+          <div className="scan-info-item">
+            <span className="scan-info-label">
+              Status
+            </span>
+
+            <strong className="scan-status-value">
+              {result?.type ===
+              "active"
+                ? "Active"
+                : result?.type ===
+                    "expired"
+                  ? "Expired"
+                  : member.status}
+            </strong>
+          </div>
+
+          <div className="scan-info-item">
+            <div className="scan-info-icon-label">
+              <CalendarDays
+                size={15}
+              />
+
+              <span className="scan-info-label">
+                Start Date
+              </span>
+            </div>
+
+            <strong>
+              {formatDate(
+                member.startDate
+              )}
+            </strong>
+          </div>
+
+          <div className="scan-info-item">
+            <div className="scan-info-icon-label">
+              <CalendarDays
+                size={15}
+              />
+
+              <span className="scan-info-label">
+                Expiration
+              </span>
+            </div>
+
+            <strong
+              className={
+                result?.type ===
+                "expired"
+                  ? "expired-date-value"
+                  : ""
+              }
+            >
+              {formatDate(
+                member.expirationDate
+              )}
+            </strong>
+          </div>
+        </div>
+
+        {member.membershipType ===
+          "Family" &&
+          familyMembers.length >
+            0 && (
+            <div className="scan-family-section">
+              <div className="scan-family-header">
+                <Users size={18} />
+
+                <div>
+                  <span className="scan-info-label">
+                    Family Membership
+                  </span>
+
+                  <strong>
+                    Covered Family
+                    Members
+                  </strong>
+                </div>
+              </div>
+
+              <div className="scan-family-list">
+                {familyMembers.map(
+                  (
+                    familyMember,
+                    index
+                  ) => (
+                    <div
+                      className="scan-family-member"
+                      key={`${familyMember.name}-${index}`}
+                    >
+                      <span className="scan-family-name">
+                        {
+                          familyMember.name
+                        }
+                      </span>
+
+                      <span className="scan-family-relationship">
+                        {
+                          familyMember.relationship
+                        }
+                      </span>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          )}
+      </div>
+    );
+  }
+
+  function renderResultModal() {
+    if (!result) {
+      return null;
     }
 
     if (result.type === "active") {
       return (
-        <div className="check-in-result success">
-          <CheckCircle2
-            className="result-icon"
-            size={94}
-          />
+        <div className="scan-result-backdrop">
+          <div className="scan-result-modal scan-result-success">
+            <button
+              type="button"
+              className="scan-result-close"
+              onClick={closeResult}
+              aria-label="Close check-in result"
+            >
+              <X size={22} />
+            </button>
 
-          <div className="result-label">
-            Membership Active
-          </div>
+            <div className="scan-result-header">
+              <div className="scan-result-icon">
+                <CheckCircle2
+                  size={56}
+                  strokeWidth={2}
+                />
+              </div>
 
-          <h1>
-            Welcome, {result.member.firstName}
-          </h1>
+              <div>
+                <span className="scan-result-eyebrow">
+                  Check-In
+                  Successful
+                </span>
 
-          <div className="result-member-name">
-            {result.member.firstName}{" "}
-            {result.member.lastName}
-          </div>
+                <h2>
+                  Membership Active
+                </h2>
 
-          <div className="result-membership-type">
-            {result.member.membershipType}
-          </div>
+                <p>
+                  Welcome to Wings
+                  Arena.
+                </p>
+              </div>
+            </div>
 
-          <div className="result-expiration">
-            Valid through{" "}
-            <strong>
-              {formatDate(
-                result.member.expirationDate
-              )}
-            </strong>
+            {renderMemberInformation(
+              result.member
+            )}
+
+            <div className="scan-result-footer">
+              Check-in recorded
+              successfully.
+            </div>
           </div>
         </div>
       );
@@ -157,30 +393,49 @@ function CheckInPage() {
 
     if (result.type === "expired") {
       return (
-        <div className="check-in-result error">
-          <AlertTriangle
-            className="result-icon"
-            size={94}
-          />
+        <div className="scan-result-backdrop">
+          <div className="scan-result-modal scan-result-error">
+            <button
+              type="button"
+              className="scan-result-close"
+              onClick={closeResult}
+              aria-label="Close check-in result"
+            >
+              <X size={22} />
+            </button>
 
-          <div className="result-label">
-            Membership Expired
-          </div>
+            <div className="scan-result-header">
+              <div className="scan-result-icon">
+                <AlertTriangle
+                  size={56}
+                  strokeWidth={2}
+                />
+              </div>
 
-          <h1>
-            {result.member.firstName}{" "}
-            {result.member.lastName}
-          </h1>
+              <div>
+                <span className="scan-result-eyebrow">
+                  Check-In Denied
+                </span>
 
-          <p>Please see the front desk.</p>
+                <h2>
+                  Membership Expired
+                </h2>
 
-          <div className="result-expiration">
-            Expired{" "}
-            <strong>
-              {formatDate(
-                result.member.expirationDate
-              )}
-            </strong>
+                <p>
+                  Please see the front
+                  desk before entering.
+                </p>
+              </div>
+            </div>
+
+            {renderMemberInformation(
+              result.member
+            )}
+
+            <div className="scan-result-footer">
+              This membership must be
+              renewed before check-in.
+            </div>
           </div>
         </div>
       );
@@ -191,40 +446,140 @@ function CheckInPage() {
       result.type === "inactive"
     ) {
       return (
-        <div className="check-in-result warning">
-          <ShieldX
-            className="result-icon"
-            size={94}
-          />
+        <div className="scan-result-backdrop">
+          <div className="scan-result-modal scan-result-error">
+            <button
+              type="button"
+              className="scan-result-close"
+              onClick={closeResult}
+              aria-label="Close check-in result"
+            >
+              <X size={22} />
+            </button>
 
-          <div className="result-label">
-            Membership Unavailable
+            <div className="scan-result-header">
+              <div className="scan-result-icon">
+                <ShieldX
+                  size={56}
+                  strokeWidth={2}
+                />
+              </div>
+
+              <div>
+                <span className="scan-result-eyebrow">
+                  Check-In Denied
+                </span>
+
+                <h2>
+                  Membership
+                  Unavailable
+                </h2>
+
+                <p>
+                  Please see the front
+                  desk.
+                </p>
+              </div>
+            </div>
+
+            {renderMemberInformation(
+              result.member
+            )}
           </div>
+        </div>
+      );
+    }
 
-          <h1>
-            {result.member.firstName}{" "}
-            {result.member.lastName}
-          </h1>
+    if (
+      result.type === "system_error"
+    ) {
+      return (
+        <div className="scan-result-backdrop">
+          <div className="scan-result-modal scan-result-error">
+            <button
+              type="button"
+              className="scan-result-close"
+              onClick={closeResult}
+              aria-label="Close check-in result"
+            >
+              <X size={22} />
+            </button>
 
-          <p>Please see the front desk.</p>
+            <div className="scan-result-header">
+              <div className="scan-result-icon">
+                <WifiOff
+                  size={56}
+                  strokeWidth={2}
+                />
+              </div>
+
+              <div>
+                <span className="scan-result-eyebrow">
+                  System Error
+                </span>
+
+                <h2>
+                  Unable to Verify
+                  Membership
+                </h2>
+
+                <p>
+                  Please see the front
+                  desk.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       );
     }
 
     return (
-      <div className="check-in-result error">
-        <UserX
-          className="result-icon"
-          size={94}
-        />
+      <div className="scan-result-backdrop">
+        <div className="scan-result-modal scan-result-error">
+          <button
+            type="button"
+            className="scan-result-close"
+            onClick={closeResult}
+            aria-label="Close check-in result"
+          >
+            <X size={22} />
+          </button>
 
-        <div className="result-label">
-          Pass Not Recognized
+          <div className="scan-result-header">
+            <div className="scan-result-icon">
+              <UserX
+                size={56}
+                strokeWidth={2}
+              />
+            </div>
+
+            <div>
+              <span className="scan-result-eyebrow">
+                Check-In Denied
+              </span>
+
+              <h2>
+                Pass Not Recognized
+              </h2>
+
+              <p>
+                This membership pass
+                could not be found.
+              </p>
+            </div>
+          </div>
+
+          <div className="unknown-pass-token">
+            <span>
+              Scanned Token
+            </span>
+
+            <strong>
+              {result.qrToken}
+            </strong>
+          </div>
         </div>
-
-        <h1>Unable to Check In</h1>
-
-        <p>Please see the front desk.</p>
       </div>
     );
   }
@@ -237,17 +592,41 @@ function CheckInPage() {
             Wings Arena
           </span>
 
-          <h2>Membership Check-In</h2>
+          <h2>
+            Membership Check-In
+          </h2>
         </div>
 
         <div className="check-in-status-dot">
           <span />
-          System Ready
+          Firebase Connected
         </div>
       </div>
 
       <section className="check-in-stage">
-        {renderResult()}
+        <div className="check-in-idle">
+          <div className="scan-icon">
+            <ScanLine
+              size={72}
+              strokeWidth={1.5}
+            />
+          </div>
+
+          <h1>
+            Member Check-In
+          </h1>
+
+          <p>
+            Scan your Wings Arena
+            membership pass.
+          </p>
+
+          <div className="scanner-ready">
+            {processing
+              ? "Checking Membership..."
+              : "Scanner Ready"}
+          </div>
+        </div>
       </section>
 
       <form
@@ -255,11 +634,13 @@ function CheckInPage() {
         onSubmit={handleManualSubmit}
       >
         <div>
-          <strong>Test a Scan</strong>
+          <strong>
+            Test a Scan
+          </strong>
 
           <span>
-            You can manually enter a token while we are
-            developing.
+            Enter a member QR token
+            manually while testing.
           </span>
         </div>
 
@@ -267,26 +648,30 @@ function CheckInPage() {
           <input
             value={manualCode}
             onChange={(event) =>
-              setManualCode(event.target.value)
+              setManualCode(
+                event.target.value
+              )
             }
-            placeholder="Try WINGS-1001"
+            placeholder="Enter QR token"
+            disabled={processing}
           />
 
           <button
             type="submit"
             className="primary-button"
+            disabled={
+              processing ||
+              !manualCode.trim()
+            }
           >
-            Test Scan
+            {processing
+              ? "Checking..."
+              : "Test Scan"}
           </button>
         </div>
-
-        <div className="demo-token-list">
-          <span>Active: WINGS-1001</span>
-          <span>Expiring soon: WINGS-1002</span>
-          <span>Expired: WINGS-1003</span>
-          <span>Suspended: WINGS-1004</span>
-        </div>
       </form>
+
+      {renderResultModal()}
     </div>
   );
 }

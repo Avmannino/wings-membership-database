@@ -7,13 +7,13 @@ import {
 } from "lucide-react";
 
 import {
+  useCallback,
   useEffect,
   useState,
 } from "react";
 
 import {
   getCheckIns,
-  getMemberById,
   getMembers,
 } from "../services/memberService";
 
@@ -25,35 +25,83 @@ import {
 } from "../utils/dateUtils";
 
 function DashboardPage() {
-  const [members, setMembers] = useState([]);
-  const [checkIns, setCheckIns] = useState([]);
+  const [members, setMembers] =
+    useState([]);
+
+  const [checkIns, setCheckIns] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
+
+  const loadDashboard = useCallback(
+    async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const [
+          memberResults,
+          checkInResults,
+        ] = await Promise.all([
+          getMembers(),
+          getCheckIns(50),
+        ]);
+
+        setMembers(memberResults);
+        setCheckIns(checkInResults);
+      } catch (loadError) {
+        console.error(
+          "Unable to load dashboard:",
+          loadError
+        );
+
+        setError(
+          "Unable to load membership data."
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   useEffect(() => {
-    setMembers(getMembers());
-    setCheckIns(getCheckIns());
-  }, []);
+    loadDashboard();
+  }, [loadDashboard]);
 
-  const activeMembers = members.filter(
-    (member) =>
-      getMembershipState(member) === "active"
-  );
+  const activeMembers =
+    members.filter(
+      (member) =>
+        getMembershipState(member) ===
+        "active"
+    );
 
-  const expiredMembers = members.filter(
-    (member) =>
-      getMembershipState(member) === "expired"
-  );
+  const expiredMembers =
+    members.filter(
+      (member) =>
+        getMembershipState(member) ===
+        "expired"
+    );
 
-  const expiringSoon = members.filter((member) =>
-    isExpiringSoon(member)
-  );
+  const expiringSoon =
+    members.filter((member) =>
+      isExpiringSoon(member)
+    );
 
-  const todaysSuccessfulCheckIns = checkIns.filter(
-    (checkIn) =>
-      checkIn.result === "active" &&
-      isToday(checkIn.timestamp)
-  );
+  const todaysSuccessfulCheckIns =
+    checkIns.filter(
+      (checkIn) =>
+        checkIn.result === "active" &&
+        checkIn.timestamp &&
+        isToday(checkIn.timestamp)
+    );
 
-  const recentCheckIns = checkIns.slice(0, 10);
+  const recentCheckIns =
+    checkIns.slice(0, 10);
 
   return (
     <div className="page">
@@ -63,14 +111,31 @@ function DashboardPage() {
             Wings Arena
           </span>
 
-          <h1>Membership Dashboard</h1>
+          <h1>
+            Membership Dashboard
+          </h1>
 
           <p>
-            Current membership status and recent
-            check-ins.
+            Current membership status and
+            recent check-ins.
           </p>
         </div>
       </header>
+
+      {error && (
+        <div
+          style={{
+            padding: "14px 16px",
+            marginBottom: "20px",
+            borderRadius: "10px",
+            background: "#fff0f0",
+            color: "#a62e2e",
+            fontSize: "13px",
+          }}
+        >
+          {error}
+        </div>
+      )}
 
       <section className="stats-grid">
         <div className="stat-card">
@@ -80,7 +145,12 @@ function DashboardPage() {
 
           <div>
             <span>Total Members</span>
-            <strong>{members.length}</strong>
+
+            <strong>
+              {loading
+                ? "—"
+                : members.length}
+            </strong>
           </div>
         </div>
 
@@ -91,18 +161,32 @@ function DashboardPage() {
 
           <div>
             <span>Active</span>
-            <strong>{activeMembers.length}</strong>
+
+            <strong>
+              {loading
+                ? "—"
+                : activeMembers.length}
+            </strong>
           </div>
         </div>
 
         <div className="stat-card">
           <div className="stat-icon">
-            <CalendarClock size={22} />
+            <CalendarClock
+              size={22}
+            />
           </div>
 
           <div>
-            <span>Expiring in 30 Days</span>
-            <strong>{expiringSoon.length}</strong>
+            <span>
+              Expiring in 30 Days
+            </span>
+
+            <strong>
+              {loading
+                ? "—"
+                : expiringSoon.length}
+            </strong>
           </div>
         </div>
 
@@ -113,7 +197,12 @@ function DashboardPage() {
 
           <div>
             <span>Expired</span>
-            <strong>{expiredMembers.length}</strong>
+
+            <strong>
+              {loading
+                ? "—"
+                : expiredMembers.length}
+            </strong>
           </div>
         </div>
 
@@ -123,9 +212,14 @@ function DashboardPage() {
           </div>
 
           <div>
-            <span>Check-Ins Today</span>
+            <span>
+              Check-Ins Today
+            </span>
+
             <strong>
-              {todaysSuccessfulCheckIns.length}
+              {loading
+                ? "—"
+                : todaysSuccessfulCheckIns.length}
             </strong>
           </div>
         </div>
@@ -134,17 +228,26 @@ function DashboardPage() {
       <section className="content-card">
         <div className="content-card-header">
           <div>
-            <h2>Recent Check-Ins</h2>
+            <h2>
+              Recent Check-Ins
+            </h2>
 
             <p>
-              Latest scans recorded by the system.
+              Latest scans recorded by
+              the system.
             </p>
           </div>
         </div>
 
-        {recentCheckIns.length === 0 ? (
+        {loading ? (
           <div className="empty-state">
-            No check-ins have been recorded yet.
+            Loading check-ins...
+          </div>
+        ) : recentCheckIns.length ===
+          0 ? (
+          <div className="empty-state">
+            No check-ins have been
+            recorded yet.
           </div>
         ) : (
           <div className="table-wrapper">
@@ -158,17 +261,14 @@ function DashboardPage() {
               </thead>
 
               <tbody>
-                {recentCheckIns.map((checkIn) => {
-                  const member = checkIn.memberId
-                    ? getMemberById(checkIn.memberId)
-                    : null;
-
-                  return (
-                    <tr key={checkIn.id}>
+                {recentCheckIns.map(
+                  (checkIn) => (
+                    <tr
+                      key={checkIn.id}
+                    >
                       <td>
-                        {member
-                          ? `${member.firstName} ${member.lastName}`
-                          : "Unknown Pass"}
+                        {checkIn.memberName ||
+                          "Unknown Pass"}
                       </td>
 
                       <td>
@@ -183,13 +283,15 @@ function DashboardPage() {
                       </td>
 
                       <td>
-                        {formatDateTime(
-                          checkIn.timestamp
-                        )}
+                        {checkIn.timestamp
+                          ? formatDateTime(
+                              checkIn.timestamp
+                            )
+                          : "Processing..."}
                       </td>
                     </tr>
-                  );
-                })}
+                  )
+                )}
               </tbody>
             </table>
           </div>
