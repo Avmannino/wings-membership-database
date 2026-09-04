@@ -13,10 +13,14 @@ import {
   Send,
 } from "lucide-react";
 
-import { QRCodeSVG } from "qrcode.react";
+import {
+  QRCodeCanvas,
+  QRCodeSVG,
+} from "qrcode.react";
+
+import { sendPassEmail } from "../services/passEmailService";
 
 import {
-  buildMailtoUrl,
   buildPassDocument,
   buildSmsUrl,
   getPassRecipient,
@@ -32,6 +36,9 @@ function SendPassMenu({
   const [notice, setNotice] =
     useState("");
 
+  const [sending, setSending] =
+    useState(false);
+
   const [
     menuPosition,
     setMenuPosition,
@@ -44,6 +51,28 @@ function SendPassMenu({
 
   const recipient =
     getPassRecipient(member);
+
+  /*
+    A row notice sits over the table, so it clears
+    itself once it has been read.
+  */
+  useEffect(() => {
+    if (
+      !compact ||
+      !notice ||
+      sending
+    ) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(
+      () => setNotice(""),
+      6000
+    );
+
+    return () =>
+      window.clearTimeout(timer);
+  }, [compact, notice, sending]);
 
   useEffect(() => {
     if (!open) {
@@ -158,14 +187,51 @@ function SendPassMenu({
     });
   }
 
-  function handleSendEmail() {
-    window.location.href =
-      buildMailtoUrl(member);
-
+  async function handleSendEmail() {
     setOpen(false);
+    setSending(true);
     setNotice(
-      "Opening your email app with the pass details."
+      `Sending the pass to ${recipient.email}...`
     );
+
+    try {
+      await sendPassEmail({
+        member,
+        qrPngBase64:
+          readQrPngBase64(),
+      });
+
+      setNotice(
+        `Pass sent to ${recipient.email}.`
+      );
+    } catch (sendError) {
+      console.error(
+        "Unable to send pass email:",
+        sendError
+      );
+
+      setNotice(
+        sendError.message ||
+          "Unable to send this pass."
+      );
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function readQrPngBase64() {
+    const canvas =
+      qrSourceRef.current?.querySelector(
+        "canvas"
+      );
+
+    if (!canvas) {
+      return "";
+    }
+
+    return canvas
+      .toDataURL("image/png")
+      .split(",")[1];
   }
 
   function handleSendSms() {
@@ -227,7 +293,9 @@ function SendPassMenu({
         type="button"
         className="secondary-button send-pass-option"
         onClick={handleSendEmail}
-        disabled={!recipient.email}
+        disabled={
+          !recipient.email || sending
+        }
         title={
           recipient.email
             ? `Email the pass to ${recipient.email}`
@@ -274,9 +342,15 @@ function SendPassMenu({
           type="button"
           ref={triggerRef}
           className="icon-button"
-          title="Send QR code"
+          title={
+            sending
+              ? "Sending pass..."
+              : "Send QR code"
+          }
           onClick={toggleMenu}
-          disabled={!recipient.token}
+          disabled={
+            !recipient.token || sending
+          }
           aria-expanded={open}
         >
           <Send size={18} />
@@ -287,11 +361,15 @@ function SendPassMenu({
           ref={triggerRef}
           className="secondary-button send-pass-toggle"
           onClick={toggleMenu}
-          disabled={!recipient.token}
+          disabled={
+            !recipient.token || sending
+          }
           aria-expanded={open}
         >
           <Send size={17} />
-          Send QR Code
+          {sending
+            ? "Sending..."
+            : "Send QR Code"}
         </button>
       )}
 
@@ -322,11 +400,22 @@ function SendPassMenu({
           document.body
         )}
 
-      {notice && !compact && (
-        <p className="send-pass-notice">
-          {notice}
-        </p>
-      )}
+      {notice &&
+        (compact ? (
+          <p
+            className="send-pass-notice send-pass-notice-floating"
+            role="status"
+          >
+            {notice}
+          </p>
+        ) : (
+          <p
+            className="send-pass-notice"
+            role="status"
+          >
+            {notice}
+          </p>
+        ))}
 
       <div
         ref={qrSourceRef}
@@ -334,11 +423,19 @@ function SendPassMenu({
         className="send-pass-qr-source"
       >
         {recipient.token && (
-          <QRCodeSVG
-            value={recipient.token}
-            size={220}
-            level="H"
-          />
+          <>
+            <QRCodeSVG
+              value={recipient.token}
+              size={220}
+              level="H"
+            />
+
+            <QRCodeCanvas
+              value={recipient.token}
+              size={320}
+              level="H"
+            />
+          </>
         )}
       </div>
     </div>

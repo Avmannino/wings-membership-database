@@ -1,0 +1,16 @@
+name = "wings-pass-email"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+FIREBASE_PROJECT_ID = "wings-membership-database"
+
+# Origins allowed to call this worker, comma separated.
+# Add http://localhost:5173 while developing locally.
+ALLOWED_ORIGINS = "https://avmannino.github.io"
+
+# The verified sender address at your mail provider.
+MAIL_FROM = "Wings Arena <onboarding@resend.dev>"
+
+# RESEND_API_KEY is a secret, never a var:
+#   npx wrangler secret put RESEND_API_KEY

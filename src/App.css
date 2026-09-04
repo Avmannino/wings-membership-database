@@ -1181,6 +1181,26 @@ a:focus-visible {
 }
 
 /*
+  In a table row the notice cannot widen the cell,
+  so it floats beneath the button instead.
+*/
+.send-pass-notice-floating {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 25;
+  max-width: 260px;
+  margin: 0;
+  padding: 8px 11px;
+  border: 1px solid #e2e7ee;
+  border-radius: 8px;
+  background: white;
+  white-space: normal;
+  text-align: left;
+  box-shadow: 0 10px 26px rgba(17, 33, 56, 0.14);
+}
+
+/*
   Rendered only so the print view has a QR to
   copy; never shown inside the form itself.
 */
