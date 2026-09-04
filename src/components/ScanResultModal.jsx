@@ -222,11 +222,6 @@ function ScanResultModal({
                 <h2>
                   Membership Active
                 </h2>
-
-                <p>
-                  Welcome to Wings
-                  Arena.
-                </p>
               </div>
             </div>
 
@@ -328,8 +323,8 @@ function ScanResultModal({
                 </h2>
 
                 <p>
-                  Please see the front
-                  desk.
+                  Check the connection
+                  and scan again.
                 </p>
               </div>
             </div>
