@@ -98,6 +98,16 @@ export default function useBarcodeScanner(
         return;
       }
 
+      /*
+        Autofill and some browser extensions raise
+        keydown events that carry no key at all.
+      */
+      if (
+        typeof event.key !== "string"
+      ) {
+        return;
+      }
+
       const currentTime = Date.now();
 
       /*

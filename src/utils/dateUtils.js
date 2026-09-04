@@ -6,6 +6,47 @@ export function parseDateOnly(dateString) {
   return new Date(`${dateString}T12:00:00`);
 }
 
+/*
+  A membership runs to the same day of the next month.
+  Months are uneven, so a start date late in the month
+  falls back to the last day the next one has.
+*/
+export function addOneMonth(dateString) {
+  if (!dateString) {
+    return "";
+  }
+
+  const [year, month, day] = dateString
+    .split("-")
+    .map(Number);
+
+  if (!year || !month || !day) {
+    return "";
+  }
+
+  const lastDayOfNextMonth = new Date(
+    year,
+    month + 1,
+    0
+  ).getDate();
+
+  const target = new Date(
+    year,
+    month,
+    Math.min(day, lastDayOfNextMonth)
+  );
+
+  const targetMonth = String(
+    target.getMonth() + 1
+  ).padStart(2, "0");
+
+  const targetDay = String(
+    target.getDate()
+  ).padStart(2, "0");
+
+  return `${target.getFullYear()}-${targetMonth}-${targetDay}`;
+}
+
 export function getToday() {
   const today = new Date();
   today.setHours(12, 0, 0, 0);

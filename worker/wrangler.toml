@@ -6,8 +6,7 @@ compatibility_date = "2025-01-01"
 FIREBASE_PROJECT_ID = "wings-membership-database"
 
 # Origins allowed to call this worker, comma separated.
-# Add http://localhost:5173 while developing locally.
-ALLOWED_ORIGINS = "https://avmannino.github.io"
+ALLOWED_ORIGINS = "https://avmannino.github.io,http://localhost:5173"
 
 # The verified sender address at your mail provider.
 MAIL_FROM = "Wings Arena <onboarding@resend.dev>"

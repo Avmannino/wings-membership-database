@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 
 import {
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -28,6 +29,7 @@ import {
 
 import {
   formatDate,
+  getMembershipState,
   isExpiringSoon,
 } from "../utils/dateUtils";
 
@@ -117,6 +119,41 @@ function MembersPage() {
         }
       );
     }, [members, search]);
+
+  /*
+    In force first, expired below, each sorted the
+    way the full list already was.
+  */
+  const memberGroups = useMemo(() => {
+    const active = [];
+    const expired = [];
+
+    filteredMembers.forEach(
+      (member) => {
+        if (
+          getMembershipState(member) ===
+          "active"
+        ) {
+          active.push(member);
+        } else {
+          expired.push(member);
+        }
+      }
+    );
+
+    return [
+      {
+        key: "active",
+        label: "In Force",
+        members: active,
+      },
+      {
+        key: "expired",
+        label: "Expired",
+        members: expired,
+      },
+    ];
+  }, [filteredMembers]);
 
   async function handleEditMember(
     form
@@ -275,7 +312,30 @@ function MembersPage() {
               )}
 
               {!loading &&
-                filteredMembers.map(
+                memberGroups.map(
+                  (group) =>
+                    group.members.length >
+                      0 && (
+                      <Fragment
+                        key={group.key}
+                      >
+                        <tr className="table-group-row">
+                          <td colSpan="6">
+                            <span className="table-group-label">
+                              {group.label}
+                            </span>
+
+                            <span className="table-group-count">
+                              {
+                                group
+                                  .members
+                                  .length
+                              }
+                            </span>
+                          </td>
+                        </tr>
+
+                        {group.members.map(
                   (member) => (
                     <tr
                       key={member.id}
@@ -302,7 +362,8 @@ function MembersPage() {
                             </strong>
 
                             {isExpiringSoon(
-                              member
+                              member,
+                              10
                             ) && (
                               <span className="expiring-label">
                                 Expiring
@@ -392,6 +453,9 @@ function MembersPage() {
                       </td>
                     </tr>
                   )
+                )}
+                      </Fragment>
+                    )
                 )}
 
               {!loading &&

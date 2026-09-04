@@ -283,6 +283,17 @@ function escapeHtml(value) {
   );
 }
 
+const HOUSEHOLD_SENTENCE =
+  "This QR code can be used by all members of your household, so feel free to forward this email or save a screenshot of the code.";
+
+function isFamily(pass) {
+  return (
+    (pass.membershipType || "")
+      .trim()
+      .toLowerCase() === "family"
+  );
+}
+
 function buildEmailHtml(pass) {
   const name = escapeHtml(pass.name);
 
@@ -296,6 +307,12 @@ function buildEmailHtml(pass) {
         )}</strong></p>`
       : "";
 
+  const householdLine = isFamily(pass)
+    ? `<p style="margin:0 0 18px;text-align:left;color:#4c5a6f;font-size:14px;line-height:1.5;">
+        ${HOUSEHOLD_SENTENCE}
+      </p>`
+    : "";
+
   return `<!doctype html>
 <html>
   <body style="margin:0;padding:24px;background:#f4f6f9;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
@@ -308,6 +325,8 @@ function buildEmailHtml(pass) {
         Here is your Wings Arena membership pass. Show this code at the front desk to check in.
         It is also attached to this email.
       </p>
+
+      ${householdLine}
 
       <img src="cid:wings-pass-qr" alt="Membership QR code" width="220" height="220" style="display:block;margin:0 auto 18px;" />
 
@@ -348,6 +367,10 @@ function buildEmailText(pass) {
     "",
     "Show this code at the front desk to check in."
   );
+
+  if (isFamily(pass)) {
+    lines.push("", HOUSEHOLD_SENTENCE);
+  }
 
   return lines.join("\n");
 }

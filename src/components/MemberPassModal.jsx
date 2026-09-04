@@ -5,6 +5,8 @@ import {
 
 import { QRCodeSVG } from "qrcode.react";
 
+import SendPassMenu from "./SendPassMenu";
+
 import { formatDate } from "../utils/dateUtils";
 
 function MemberPassModal({
@@ -75,6 +77,12 @@ function MemberPassModal({
         </div>
 
         <div className="modal-actions no-print">
+          <div className="pass-modal-send">
+            <SendPassMenu
+              member={member}
+            />
+          </div>
+
           <button
             type="button"
             className="secondary-button"

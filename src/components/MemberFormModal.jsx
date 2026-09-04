@@ -1,23 +1,18 @@
 import {
   useEffect,
+  useRef,
   useState,
 } from "react";
 
 import {
-  Plus,
   RefreshCw,
-  Trash2,
   X,
 } from "lucide-react";
 
 import SendPassMenu from "./SendPassMenu";
 
+import { addOneMonth } from "../utils/dateUtils";
 import { generateMemberToken } from "../utils/tokenUtils";
-
-const emptyFamilyMember = {
-  name: "",
-  relationship: "",
-};
 
 const emptyForm = {
   firstName: "",
@@ -29,7 +24,6 @@ const emptyForm = {
   expirationDate: "",
   qrToken: "",
   notes: "",
-  familyMembers: [],
 };
 
 function MemberFormModal({
@@ -45,6 +39,9 @@ function MemberFormModal({
 
   const [error, setError] =
     useState("");
+
+  const expirationEditedRef =
+    useRef(false);
 
   useEffect(() => {
     if (member) {
@@ -68,12 +65,6 @@ function MemberFormModal({
           member.qrToken || "",
         notes:
           member.notes || "",
-        familyMembers:
-          Array.isArray(
-            member.familyMembers
-          )
-            ? member.familyMembers
-            : [],
       });
     } else {
       setForm({
@@ -84,6 +75,7 @@ function MemberFormModal({
     }
 
     setError("");
+    expirationEditedRef.current = false;
   }, [member]);
 
   function handleChange(event) {
@@ -92,73 +84,34 @@ function MemberFormModal({
       value,
     } = event.target;
 
+    if (name === "expirationDate") {
+      expirationEditedRef.current = true;
+    }
+
     setForm((current) => {
       const updatedForm = {
         ...current,
         [name]: value,
       };
 
+      /*
+        A start date implies the expiration a month
+        later, until someone sets one by hand.
+      */
       if (
-        name === "membershipType" &&
-        value === "Family" &&
-        current.familyMembers.length === 0
+        name === "startDate" &&
+        !expirationEditedRef.current
       ) {
-        updatedForm.familyMembers = [
-          { ...emptyFamilyMember },
-        ];
-      }
-
-      if (
-        name === "membershipType" &&
-        value === "Individual"
-      ) {
-        updatedForm.familyMembers = [];
+        updatedForm.expirationDate =
+          addOneMonth(value);
       }
 
       return updatedForm;
     });
   }
 
-  function handleFamilyMemberChange(
-    index,
-    field,
-    value
-  ) {
-    setForm((current) => ({
-      ...current,
-      familyMembers:
-        current.familyMembers.map(
-          (familyMember, memberIndex) =>
-            memberIndex === index
-              ? {
-                  ...familyMember,
-                  [field]: value,
-                }
-              : familyMember
-        ),
-    }));
-  }
 
-  function addFamilyMember() {
-    setForm((current) => ({
-      ...current,
-      familyMembers: [
-        ...current.familyMembers,
-        { ...emptyFamilyMember },
-      ],
-    }));
-  }
 
-  function removeFamilyMember(index) {
-    setForm((current) => ({
-      ...current,
-      familyMembers:
-        current.familyMembers.filter(
-          (_, memberIndex) =>
-            memberIndex !== index
-        ),
-    }));
-  }
 
   async function handleSubmit(
     event
@@ -178,24 +131,6 @@ function MemberFormModal({
       return;
     }
 
-    if (
-      form.membershipType === "Family"
-    ) {
-      const incompleteFamilyMember =
-        form.familyMembers.some(
-          (familyMember) =>
-            !familyMember.name.trim() ||
-            !familyMember.relationship.trim()
-        );
-
-      if (incompleteFamilyMember) {
-        setError(
-          "Please enter a name and relationship for each family member."
-        );
-
-        return;
-      }
-    }
 
     setSubmitting(true);
     setError("");
@@ -357,148 +292,6 @@ function MemberFormModal({
                 required
               />
             </label>
-
-            {form.membershipType ===
-              "Family" && (
-              <div className="form-field form-field-full">
-                <span>
-                  Family Members
-                </span>
-
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection:
-                      "column",
-                    gap: "10px",
-                    marginTop: "2px",
-                  }}
-                >
-                  {form.familyMembers.map(
-                    (
-                      familyMember,
-                      index
-                    ) => (
-                      <div
-                        key={index}
-                        style={{
-                          display:
-                            "grid",
-                          gridTemplateColumns:
-                            "minmax(0, 1fr) minmax(150px, 0.7fr) 38px",
-                          gap: "8px",
-                          alignItems:
-                            "center",
-                        }}
-                      >
-                        <input
-                          type="text"
-                          value={
-                            familyMember.name
-                          }
-                          onChange={(
-                            event
-                          ) =>
-                            handleFamilyMemberChange(
-                              index,
-                              "name",
-                              event
-                                .target
-                                .value
-                            )
-                          }
-                          placeholder="Family member name"
-                          disabled={
-                            submitting
-                          }
-                          required
-                        />
-
-                        <select
-                          value={
-                            familyMember.relationship
-                          }
-                          onChange={(
-                            event
-                          ) =>
-                            handleFamilyMemberChange(
-                              index,
-                              "relationship",
-                              event
-                                .target
-                                .value
-                            )
-                          }
-                          disabled={
-                            submitting
-                          }
-                          required
-                        >
-                          <option value="">
-                            Relationship
-                          </option>
-
-                          <option value="Spouse / Partner">
-                            Spouse /
-                            Partner
-                          </option>
-
-                          <option value="Child">
-                            Child
-                          </option>
-
-                          <option value="Parent">
-                            Parent
-                          </option>
-
-                          <option value="Sibling">
-                            Sibling
-                          </option>
-
-                          <option value="Other">
-                            Other
-                          </option>
-                        </select>
-
-                        <button
-                          type="button"
-                          className="icon-button danger"
-                          title="Remove family member"
-                          onClick={() =>
-                            removeFamilyMember(
-                              index
-                            )
-                          }
-                          disabled={
-                            submitting
-                          }
-                        >
-                          <Trash2
-                            size={17}
-                          />
-                        </button>
-                      </div>
-                    )
-                  )}
-
-                  <button
-                    type="button"
-                    className="secondary-button"
-                    onClick={
-                      addFamilyMember
-                    }
-                    disabled={submitting}
-                    style={{
-                      width:
-                        "fit-content",
-                    }}
-                  >
-                    <Plus size={17} />
-                    Add Family Member
-                  </button>
-                </div>
-              </div>
-            )}
 
             <div className="form-field form-field-full">
               <span>

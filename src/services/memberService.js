@@ -70,28 +70,6 @@ function normalizeCheckIn(
   };
 }
 
-function normalizeFamilyMembers(
-  familyMembers
-) {
-  if (!Array.isArray(familyMembers)) {
-    return [];
-  }
-
-  return familyMembers
-    .map((familyMember) => ({
-      name:
-        familyMember.name?.trim() ||
-        "",
-      relationship:
-        familyMember.relationship?.trim() ||
-        "",
-    }))
-    .filter(
-      (familyMember) =>
-        familyMember.name ||
-        familyMember.relationship
-    );
-}
 
 function normalizeMemberData(
   memberData
@@ -122,12 +100,6 @@ function normalizeMemberData(
     notes:
       memberData.notes?.trim() ||
       "",
-    familyMembers:
-      membershipType === "Family"
-        ? normalizeFamilyMembers(
-            memberData.familyMembers
-          )
-        : [],
   };
 }
 
