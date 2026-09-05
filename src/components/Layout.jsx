@@ -1,6 +1,8 @@
 import {
   LayoutDashboard,
+  LogOut,
   ScanLine,
+  TrendingUp,
   Users,
 } from "lucide-react";
 
@@ -19,6 +21,7 @@ import {
 import MemberFormModal from "./MemberFormModal";
 import ScanResultModal from "./ScanResultModal";
 
+import { useAuth } from "../contexts/AuthContext";
 import { MembersRefreshContext } from "../contexts/membersRefreshContext";
 import { ScanContext } from "../contexts/scanContext";
 
@@ -33,6 +36,8 @@ import {
 import { getMembershipState } from "../utils/dateUtils";
 
 function Layout() {
+  const { logout } = useAuth();
+
   const [
     showAddMember,
     setShowAddMember,
@@ -234,10 +239,27 @@ function Layout() {
               <Users size={20} />
               <span>Members</span>
             </NavLink>
+
+            <NavLink
+              to="/revenue"
+              className={({ isActive }) =>
+                `nav-link ${isActive ? "active" : ""}`
+              }
+            >
+              <TrendingUp size={20} />
+              <span>Revenue Schedule</span>
+            </NavLink>
           </nav>
 
           <div className="sidebar-footer">
-            Wings Arena
+            <button
+              type="button"
+              className="sidebar-signout"
+              onClick={logout}
+            >
+              <LogOut size={17} />
+              Sign Out
+            </button>
           </div>
         </aside>
 

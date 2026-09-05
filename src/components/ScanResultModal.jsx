@@ -14,6 +14,8 @@ import {
   getMembershipState,
 } from "../utils/dateUtils";
 
+import { getMemberDisplayName } from "../utils/membershipUtils";
+
 /*
   A scan can happen while staff are on any screen, so
   this renders from the layout rather than the check-in
@@ -58,8 +60,9 @@ function ScanResultModal({
             </span>
 
             <h3>
-              {member.firstName}{" "}
-              {member.lastName}
+              {getMemberDisplayName(
+                member
+              )}
             </h3>
           </div>
         </div>

@@ -14,6 +14,7 @@ import CheckInPage from "./pages/CheckInPage";
 import DashboardPage from "./pages/DashboardPage";
 import LoginPage from "./pages/LoginPage";
 import MembersPage from "./pages/MembersPage";
+import RevenuePage from "./pages/RevenuePage";
 
 function App() {
   return (
@@ -55,6 +56,11 @@ function App() {
             <Route
               path="/members"
               element={<MembersPage />}
+            />
+
+            <Route
+              path="/revenue"
+              element={<RevenuePage />}
             />
           </Route>
 

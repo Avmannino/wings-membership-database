@@ -5,6 +5,14 @@ import { useAuth } from "../contexts/AuthContext";
 
 import "./LoginPage.css";
 
+/*
+  The arena signs in on one shared staff account, so the
+  address is filled in and only the password is typed.
+  It is not a secret; the password is.
+*/
+const STAFF_EMAIL =
+  "wingsarenact@gmail.com";
+
 function LoginPage() {
   const {
     user,
@@ -12,7 +20,8 @@ function LoginPage() {
     login,
   } = useAuth();
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] =
+    useState(STAFF_EMAIL);
   const [password, setPassword] =
     useState("");
 
@@ -96,6 +105,7 @@ function LoginPage() {
                 setPassword(event.target.value)
               }
               autoComplete="current-password"
+              autoFocus
               required
             />
           </label>

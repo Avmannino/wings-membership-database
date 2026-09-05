@@ -1,14 +1,14 @@
 import { formatDate } from "./dateUtils";
+import { getMemberDisplayName } from "./membershipUtils";
 
 export function getPassRecipient(
   member
 ) {
   return {
-    name: `${
+    name: getMemberDisplayName(member),
+    firstName: (
       member?.firstName || ""
-    } ${
-      member?.lastName || ""
-    }`.trim(),
+    ).trim(),
     email:
       member?.email?.trim() || "",
     phone:

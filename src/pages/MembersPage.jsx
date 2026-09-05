@@ -33,6 +33,8 @@ import {
   isExpiringSoon,
 } from "../utils/dateUtils";
 
+import { getMemberDisplayName } from "../utils/membershipUtils";
+
 function MembersPage() {
   const [members, setMembers] =
     useState([]);
@@ -273,6 +275,7 @@ function MembersPage() {
             />
           </div>
 
+
           <div className="member-count">
             {loading
               ? "Loading..."
@@ -353,12 +356,9 @@ function MembersPage() {
 
                           <div>
                             <strong>
-                              {
-                                member.firstName
-                              }{" "}
-                              {
-                                member.lastName
-                              }
+                              {getMemberDisplayName(
+                                member
+                              )}
                             </strong>
 
                             {isExpiringSoon(

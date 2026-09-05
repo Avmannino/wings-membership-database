@@ -151,11 +151,34 @@ a:focus-visible {
 
 .sidebar-footer {
   margin-top: auto;
-  padding: 16px 8px 0;
-  color: #70839d;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  padding: 16px 4px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.sidebar-signout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 9px;
+  background: transparent;
+  color: #c2d0e2;
+  font-size: 13px;
+  font-weight: 650;
+  transition:
+    background 150ms ease,
+    color 150ms ease;
+}
+
+.sidebar-signout:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
 }
 
 .main-content {
@@ -934,6 +957,121 @@ a:focus-visible {
   .table-group-row:first-child
   td {
   padding-top: 11px;
+}
+
+.page-notice {
+  max-width: 640px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  background: #eaf7ef;
+  color: #1c6b40;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.page-error {
+  max-width: 640px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  background: #fff0f0;
+  color: #a62e2e;
+  font-size: 13px;
+}
+
+/* Revenue Schedule */
+
+.revenue-year-picker {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.revenue-year-picker span {
+  color: #66758a;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.revenue-year-picker select {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #d8dfe8;
+  border-radius: 9px;
+  background: white;
+  font-weight: 650;
+}
+
+.revenue-table th,
+.revenue-table td {
+  white-space: nowrap;
+}
+
+.revenue-month-column {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.revenue-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: white;
+}
+
+.revenue-table th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background: #f8fafc;
+}
+
+.editable-cell {
+  cursor: text;
+  transition: background 120ms ease;
+}
+
+.editable-cell:hover {
+  background: #eef4fb;
+  box-shadow: inset 0 0 0 1px #c3d5ea;
+}
+
+.editable-cell-saving {
+  opacity: 0.5;
+}
+
+.editable-cell-input {
+  width: 100%;
+  min-width: 90px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #123d72;
+  border-radius: 6px;
+  background: white;
+  color: #172033;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: inherit;
+}
+
+.revenue-billed {
+  color: #16603a;
+  font-weight: 750;
+}
+
+.revenue-total-row td {
+  background: #eef6f0;
+  border-bottom: 2px solid #c9dcd1;
+  color: #14532d;
+  font-weight: 800;
+}
+
+.revenue-total-row td:first-child {
+  background: #eef6f0;
+  font-size: 15px;
 }
 
 .table-group-label {

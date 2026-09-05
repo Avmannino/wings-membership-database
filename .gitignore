@@ -27,3 +27,9 @@ dist-ssr
 .env
 .dev.vars
 .wrangler
+
+# Local agent settings (may contain credentials)
+.claude/
+
+# Imported member data - real names, not for a public repo
+src/data/

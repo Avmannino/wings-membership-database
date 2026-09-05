@@ -12,6 +12,7 @@ import {
 import SendPassMenu from "./SendPassMenu";
 
 import { addOneMonth } from "../utils/dateUtils";
+import { getDefaultMonthlyPrice } from "../utils/membershipUtils";
 import { generateMemberToken } from "../utils/tokenUtils";
 
 const emptyForm = {
@@ -20,6 +21,11 @@ const emptyForm = {
   email: "",
   phone: "",
   membershipType: "Individual",
+  monthlyPrice: String(
+    getDefaultMonthlyPrice(
+      "Individual"
+    )
+  ),
   startDate: "",
   expirationDate: "",
   qrToken: "",
@@ -43,6 +49,9 @@ function MemberFormModal({
   const expirationEditedRef =
     useRef(false);
 
+  const priceEditedRef =
+    useRef(false);
+
   useEffect(() => {
     if (member) {
       setForm({
@@ -57,6 +66,12 @@ function MemberFormModal({
         membershipType:
           member.membershipType ||
           "Individual",
+        monthlyPrice: String(
+          member.monthlyPrice ??
+            getDefaultMonthlyPrice(
+              member.membershipType
+            )
+        ),
         startDate:
           member.startDate || "",
         expirationDate:
@@ -76,6 +91,7 @@ function MemberFormModal({
 
     setError("");
     expirationEditedRef.current = false;
+    priceEditedRef.current = false;
   }, [member]);
 
   function handleChange(event) {
@@ -88,11 +104,31 @@ function MemberFormModal({
       expirationEditedRef.current = true;
     }
 
+    if (name === "monthlyPrice") {
+      priceEditedRef.current = true;
+    }
+
     setForm((current) => {
       const updatedForm = {
         ...current,
         [name]: value,
       };
+
+      /*
+        Switching type moves the rate to that type's
+        price, until someone sets one by hand.
+      */
+      if (
+        name === "membershipType" &&
+        !priceEditedRef.current
+      ) {
+        updatedForm.monthlyPrice =
+          String(
+            getDefaultMonthlyPrice(
+              value
+            )
+          );
+      }
 
       /*
         A start date implies the expiration a month
@@ -260,6 +296,22 @@ function MemberFormModal({
                   Family
                 </option>
               </select>
+            </label>
+
+            <label className="form-field">
+              <span>
+                Monthly Price
+              </span>
+
+              <input
+                type="number"
+                name="monthlyPrice"
+                value={form.monthlyPrice}
+                onChange={handleChange}
+                disabled={submitting}
+                min="0"
+                step="1"
+              />
             </label>
 
             <label className="form-field">

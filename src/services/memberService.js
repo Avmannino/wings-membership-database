@@ -14,6 +14,11 @@ import {
 } from "firebase/firestore";
 
 import { db } from "../firebase/firebase";
+import {
+  getDefaultMonthlyPrice,
+  getMonthlyRevenue,
+  monthKeyFor,
+} from "../utils/membershipUtils";
 import { generateMemberToken } from "../utils/tokenUtils";
 
 const membersCollection = collection(
@@ -71,6 +76,31 @@ function normalizeCheckIn(
 }
 
 
+/*
+  Members keep the rate they were billed at, so an
+  older membership is not restated when pricing
+  changes. New ones take the rate for their type.
+*/
+function resolveMonthlyPrice(
+  memberData,
+  membershipType
+) {
+  const provided = Number(
+    memberData.monthlyPrice
+  );
+
+  if (
+    Number.isFinite(provided) &&
+    provided >= 0
+  ) {
+    return provided;
+  }
+
+  return getDefaultMonthlyPrice(
+    membershipType
+  );
+}
+
 function normalizeMemberData(
   memberData
 ) {
@@ -89,6 +119,10 @@ function normalizeMemberData(
       memberData.phone?.trim() ||
       "",
     membershipType,
+    monthlyPrice: resolveMonthlyPrice(
+      memberData,
+      membershipType
+    ),
     startDate:
       memberData.startDate || "",
     expirationDate:
@@ -250,6 +284,37 @@ export async function addMember(
   };
 }
 
+function freezeBilledMonths(member) {
+  const today = new Date();
+  const year = today.getFullYear();
+
+  const amounts = getMonthlyRevenue(
+    member,
+    year
+  );
+
+  const frozen = {
+    ...(member.revenueByMonth || {}),
+  };
+
+  for (
+    let month = 0;
+    month < today.getMonth();
+    month += 1
+  ) {
+    const key = monthKeyFor(
+      year,
+      month
+    );
+
+    if (!(key in frozen)) {
+      frozen[key] = amounts[month];
+    }
+  }
+
+  return frozen;
+}
+
 export async function updateMember(
   memberId,
   updates
@@ -276,6 +341,25 @@ export async function updateMember(
     memberId
   );
 
+  /*
+    A membership that changes rate or type part way
+    through a year must not restate the months already
+    billed, so those are recorded before the change
+    takes effect.
+  */
+  const rateChanged =
+    normalizedData.monthlyPrice !==
+      currentMember.monthlyPrice ||
+    normalizedData.membershipType !==
+      currentMember.membershipType;
+
+  if (rateChanged) {
+    normalizedData.revenueByMonth =
+      freezeBilledMonths(
+        currentMember
+      );
+  }
+
   const memberReference = doc(
     db,
     "members",
@@ -295,6 +379,24 @@ export async function updateMember(
     ...currentMember,
     ...normalizedData,
   };
+}
+
+
+/*
+  Writes single fields straight through, so an inline
+  edit does not have to round-trip the whole record.
+*/
+export async function updateMemberFields(
+  memberId,
+  fields
+) {
+  await updateDoc(
+    doc(db, "members", memberId),
+    {
+      ...fields,
+      updatedAt: serverTimestamp(),
+    }
+  );
 }
 
 export async function deleteMember(

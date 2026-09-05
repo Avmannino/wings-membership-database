@@ -8,6 +8,7 @@ import { QRCodeSVG } from "qrcode.react";
 import SendPassMenu from "./SendPassMenu";
 
 import { formatDate } from "../utils/dateUtils";
+import { getMemberDisplayName } from "../utils/membershipUtils";
 
 function MemberPassModal({
   member,
@@ -61,7 +62,7 @@ function MemberPassModal({
           </div>
 
           <h3>
-            {member.firstName} {member.lastName}
+            {getMemberDisplayName(member)}
           </h3>
 
           <div className="member-pass-expiration">
