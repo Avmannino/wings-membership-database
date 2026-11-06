@@ -1,4 +1,5 @@
 import {
+  Gift,
   LayoutDashboard,
   LogOut,
   ScanLine,
@@ -18,6 +19,7 @@ import {
   Outlet,
 } from "react-router-dom";
 
+import GiftCardDetailModal from "./GiftCardDetailModal";
 import MemberFormModal from "./MemberFormModal";
 import ScanResultModal from "./ScanResultModal";
 
@@ -34,6 +36,7 @@ import {
 } from "../services/memberService";
 
 import { getMembershipState } from "../utils/dateUtils";
+import { isGiftCardCode } from "../utils/giftCardUtils";
 
 function Layout() {
   const { logout } = useAuth();
@@ -84,6 +87,11 @@ function Layout() {
   const scanProcessingRef =
     useRef(false);
 
+  const [
+    scannedGiftCardId,
+    setScannedGiftCardId,
+  ] = useState(null);
+
   const closeScanResult =
     useCallback(() => {
       setScanResult(null);
@@ -100,6 +108,18 @@ function Layout() {
         .toUpperCase();
 
       if (!qrToken) {
+        return;
+      }
+
+      /*
+        A gift card is not a pass, so its code opens
+        the card for redemption instead of being
+        recorded as a failed check-in.
+      */
+      if (isGiftCardCode(qrToken)) {
+        setScanResult(null);
+        setScannedGiftCardId(qrToken);
+
         return;
       }
 
@@ -241,6 +261,16 @@ function Layout() {
             </NavLink>
 
             <NavLink
+              to="/gift-cards"
+              className={({ isActive }) =>
+                `nav-link ${isActive ? "active" : ""}`
+              }
+            >
+              <Gift size={20} />
+              <span>Gift Cards</span>
+            </NavLink>
+
+            <NavLink
               to="/revenue"
               className={({ isActive }) =>
                 `nav-link ${isActive ? "active" : ""}`
@@ -280,6 +310,16 @@ function Layout() {
           <ScanResultModal
             result={scanResult}
             onClose={closeScanResult}
+          />
+        )}
+
+        {scannedGiftCardId && (
+          <GiftCardDetailModal
+            key={scannedGiftCardId}
+            cardId={scannedGiftCardId}
+            onClose={() =>
+              setScannedGiftCardId(null)
+            }
           />
         )}
       </div>

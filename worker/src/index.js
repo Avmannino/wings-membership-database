@@ -1,5 +1,5 @@
 /*
-  Sends membership passes by email.
+  Sends membership passes and gift cards by email.
 
   The browser cannot hold the mail provider's API key,
   so it calls this worker instead. The worker proves the
@@ -375,6 +375,45 @@ function buildEmailText(pass) {
   return lines.join("\n");
 }
 
+function isValidEmail(email) {
+  return (
+    typeof email === "string" &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+      email
+    )
+  );
+}
+
+function validateAttachment(
+  qrPngBase64
+) {
+  if (
+    qrPngBase64 &&
+    String(qrPngBase64).length >
+      MAX_ATTACHMENT_BYTES
+  ) {
+    throw new Error(
+      "The QR image is too large to send."
+    );
+  }
+}
+
+function qrAttachments(
+  qrPngBase64,
+  filename,
+  contentId
+) {
+  return qrPngBase64
+    ? [
+        {
+          filename,
+          content: qrPngBase64,
+          content_id: contentId,
+        },
+      ]
+    : [];
+}
+
 function validatePass(pass) {
   if (
     !pass ||
@@ -385,12 +424,7 @@ function validatePass(pass) {
     );
   }
 
-  if (
-    !pass.email ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-      pass.email
-    )
-  ) {
+  if (!isValidEmail(pass.email)) {
     throw new Error(
       "That member does not have a valid email address."
     );
@@ -402,15 +436,285 @@ function validatePass(pass) {
     );
   }
 
+  validateAttachment(pass.qrPngBase64);
+}
+
+function buildPassMessage(pass) {
+  validatePass(pass);
+
+  return {
+    to: pass.email,
+    subject:
+      "Your Wings Arena Membership Pass",
+    html: buildEmailHtml(pass),
+    text: buildEmailText(pass),
+    attachments: qrAttachments(
+      pass.qrPngBase64,
+      "wings-arena-pass.png",
+      "wings-pass-qr"
+    ),
+  };
+}
+
+const GIFT_CARD_CODE_PATTERN =
+  /^WINGS-GC-\d{1,10}$/;
+
+/*
+  Names and labels come from the browser and end up in
+  the subject line, so they are flattened to one short
+  line before use.
+*/
+function singleLine(
+  value,
+  maximumLength = 80
+) {
+  return String(value || "")
+    .replace(/[\r\n]+/g, " ")
+    .trim()
+    .slice(0, maximumLength);
+}
+
+function firstNameOf(name) {
+  return (
+    singleLine(name).split(/\s+/)[0] ||
+    ""
+  );
+}
+
+function validateGiftCard(card) {
   if (
-    pass.qrPngBase64 &&
-    pass.qrPngBase64.length >
-      MAX_ATTACHMENT_BYTES
+    !card ||
+    typeof card !== "object"
   ) {
     throw new Error(
-      "The pass image is too large to send."
+      "Missing gift card details."
     );
   }
+
+  if (!isValidEmail(card.email)) {
+    throw new Error(
+      "That gift card does not have a valid email address."
+    );
+  }
+
+  if (
+    !GIFT_CARD_CODE_PATTERN.test(
+      card.code || ""
+    )
+  ) {
+    throw new Error(
+      "That gift card number is not valid."
+    );
+  }
+
+  if (
+    !["recipient", "purchaser"].includes(
+      card.audience
+    )
+  ) {
+    throw new Error(
+      "Choose whether this goes to the recipient or the purchaser."
+    );
+  }
+
+  validateAttachment(card.qrPngBase64);
+}
+
+function giftCardSubject(card) {
+  const recipientName = singleLine(
+    card.recipientName
+  );
+
+  const purchaserName = singleLine(
+    card.purchaserName
+  );
+
+  if (card.audience === "purchaser") {
+    return recipientName
+      ? `Your Wings Arena gift card for ${recipientName}`
+      : "Your Wings Arena gift card";
+  }
+
+  return purchaserName
+    ? `${purchaserName} sent you a Wings Arena gift card`
+    : "Your Wings Arena gift card";
+}
+
+function buildGiftCardEmailHtml(card) {
+  const toPurchaser =
+    card.audience === "purchaser";
+
+  const recipientName = escapeHtml(
+    singleLine(card.recipientName)
+  );
+
+  const purchaserName = escapeHtml(
+    singleLine(card.purchaserName)
+  );
+
+  const greetingName =
+    escapeHtml(
+      firstNameOf(
+        toPurchaser
+          ? card.purchaserName
+          : card.recipientName
+      )
+    ) || "there";
+
+  const balance = escapeHtml(
+    singleLine(card.balanceLabel, 24)
+  );
+
+  const code = escapeHtml(card.code);
+
+  const intro = toPurchaser
+    ? `Thank you for your purchase. Here is the Wings Arena gift card you bought${
+        recipientName
+          ? ` for <strong>${recipientName}</strong>`
+          : ""
+      }. Forward this email or print it to pass it along.`
+    : `${
+        purchaserName
+          ? `<strong>${purchaserName}</strong> sent you`
+          : "You have received"
+      } a Wings Arena gift card. Show the code below at the front desk to use it.`;
+
+  const toFromLines = [
+    recipientName
+      ? `To <strong style="color:#ffffff;">${recipientName}</strong>`
+      : "",
+    purchaserName
+      ? `From <strong style="color:#ffffff;">${purchaserName}</strong>`
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" &nbsp;·&nbsp; ");
+
+  const receiptLines = toPurchaser
+    ? `<div style="margin:22px 0 0;padding:14px 16px;border:1px solid #e0e5ec;border-radius:12px;text-align:left;color:#4c5a6f;font-size:13px;line-height:1.7;">
+        <div><strong style="color:#172033;">Gift card number:</strong> ${code}</div>
+        <div><strong style="color:#172033;">Amount:</strong> ${escapeHtml(
+          singleLine(
+            card.originalValueLabel,
+            24
+          )
+        )}</div>
+        ${
+          card.issuedLabel
+            ? `<div><strong style="color:#172033;">Issued:</strong> ${escapeHtml(
+                singleLine(
+                  card.issuedLabel,
+                  40
+                )
+              )}</div>`
+            : ""
+        }
+      </div>`
+    : "";
+
+  return `<!doctype html>
+<html>
+  <body style="margin:0;padding:24px;background:#f4f6f9;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;">
+    <div style="max-width:460px;margin:0 auto;padding:28px 26px 32px;background:#ffffff;border:1px solid #e0e5ec;border-radius:16px;text-align:center;">
+      <div style="font-size:12px;font-weight:800;letter-spacing:2px;color:#4c5a6f;">WINGS ARENA</div>
+
+      <p style="margin:22px 0 4px;text-align:left;color:#172033;font-size:15px;">Hi ${greetingName},</p>
+
+      <p style="margin:0 0 20px;text-align:left;color:#4c5a6f;font-size:14px;line-height:1.5;">${intro}</p>
+
+      <div style="padding:22px 18px;border-radius:14px;background:#0b1f3a;color:#ffffff;">
+        <div style="font-size:11px;font-weight:800;letter-spacing:2px;color:#9fb0c6;">GIFT CARD</div>
+        <div style="margin-top:10px;font-size:38px;font-weight:800;letter-spacing:-1px;color:#ffffff;">${balance}</div>
+        <div style="margin-top:4px;font-size:12px;color:#c2d0e2;">Available balance</div>
+        ${
+          toFromLines
+            ? `<div style="margin-top:14px;font-size:13px;color:#c2d0e2;">${toFromLines}</div>`
+            : ""
+        }
+      </div>
+
+      <img src="cid:wings-gift-card-qr" alt="Gift card QR code" width="200" height="200" style="display:block;margin:22px auto 12px;" />
+
+      <div style="font-family:ui-monospace,Menlo,monospace;font-size:15px;letter-spacing:1px;color:#26364d;">${code}</div>
+
+      ${receiptLines}
+    </div>
+  </body>
+</html>`;
+}
+
+function buildGiftCardEmailText(card) {
+  const toPurchaser =
+    card.audience === "purchaser";
+
+  const recipientName = singleLine(
+    card.recipientName
+  );
+
+  const purchaserName = singleLine(
+    card.purchaserName
+  );
+
+  const lines = [
+    toPurchaser
+      ? `Here is the Wings Arena gift card you bought${
+          recipientName
+            ? ` for ${recipientName}`
+            : ""
+        }.`
+      : `${
+          purchaserName
+            ? `${purchaserName} sent you`
+            : "You have received"
+        } a Wings Arena gift card.`,
+    "",
+    `Gift card number: ${card.code}`,
+    `Available balance: ${singleLine(
+      card.balanceLabel,
+      24
+    )}`,
+  ];
+
+  if (toPurchaser) {
+    lines.push(
+      `Amount: ${singleLine(
+        card.originalValueLabel,
+        24
+      )}`
+    );
+
+    if (card.issuedLabel) {
+      lines.push(
+        `Issued: ${singleLine(
+          card.issuedLabel,
+          40
+        )}`
+      );
+    }
+  }
+
+  lines.push(
+    "",
+    "Show this code at the Wings Arena front desk to use it."
+  );
+
+  return lines.join("\n");
+}
+
+function buildGiftCardMessage(card) {
+  validateGiftCard(card);
+
+  return {
+    to: card.email,
+    subject: giftCardSubject(card),
+    html: buildGiftCardEmailHtml(card),
+    text: buildGiftCardEmailText(card),
+    attachments: qrAttachments(
+      card.qrPngBase64,
+      "wings-arena-gift-card.png",
+      "wings-gift-card-qr"
+    ),
+  };
 }
 
 export default {
@@ -473,8 +777,6 @@ export default {
       );
     }
 
-    let pass;
-
     try {
       const claims =
         await verifyIdToken(
@@ -487,13 +789,6 @@ export default {
         idToken,
         env.FIREBASE_PROJECT_ID
       );
-
-      const body =
-        await request.json();
-
-      pass = body?.pass;
-
-      validatePass(pass);
     } catch (error) {
       return jsonResponse(
         { error: error.message },
@@ -502,19 +797,24 @@ export default {
       );
     }
 
-    const attachments =
-      pass.qrPngBase64
-        ? [
-            {
-              filename:
-                "wings-arena-pass.png",
-              content:
-                pass.qrPngBase64,
-              content_id:
-                "wings-pass-qr",
-            },
-          ]
-        : [];
+    let message;
+
+    try {
+      const body =
+        await request.json();
+
+      message = body?.giftCard
+        ? buildGiftCardMessage(
+            body.giftCard
+          )
+        : buildPassMessage(body?.pass);
+    } catch (error) {
+      return jsonResponse(
+        { error: error.message },
+        400,
+        headers
+      );
+    }
 
     try {
       const response = await fetch(
@@ -528,12 +828,12 @@ export default {
           },
           body: JSON.stringify({
             from: env.MAIL_FROM,
-            to: [pass.email],
-            subject:
-              "Your Wings Arena Membership Pass",
-            html: buildEmailHtml(pass),
-            text: buildEmailText(pass),
-            attachments,
+            to: [message.to],
+            subject: message.subject,
+            html: message.html,
+            text: message.text,
+            attachments:
+              message.attachments,
           }),
         }
       );
@@ -557,7 +857,7 @@ export default {
       return jsonResponse(
         {
           id: result.id || "",
-          sentTo: pass.email,
+          sentTo: message.to,
         },
         200,
         headers

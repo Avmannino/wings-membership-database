@@ -79,6 +79,28 @@ match /staff/{uid} {
 Without this the worker cannot confirm staff and will reject every
 send with an authorization error.
 
+## Gift cards
+
+The same worker emails gift cards, either to the recipient or to the
+purchaser as their receipt. After pulling the gift card changes, run
+`npx wrangler deploy` from `worker/` again so it accepts them.
+
+Gift cards are stored in a `giftCards` collection, and card numbers
+come from a `counters/giftCards` document. Both need a staff rule
+alongside the one for `members`:
+
+```
+match /giftCards/{cardId} {
+  allow read, write: if request.auth != null
+    && exists(/databases/$(database)/documents/staff/$(request.auth.uid));
+}
+
+match /counters/{counterId} {
+  allow read, write: if request.auth != null
+    && exists(/databases/$(database)/documents/staff/$(request.auth.uid));
+}
+```
+
 ## How requests are checked
 
 1. The browser attaches the staff member's Firebase ID token.

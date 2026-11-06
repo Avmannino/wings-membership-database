@@ -47,6 +47,20 @@ export function addOneMonth(dateString) {
   return `${target.getFullYear()}-${targetMonth}-${targetDay}`;
 }
 
+export function toDateInputValue(
+  date = new Date()
+) {
+  const month = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
+
+  const day = String(
+    date.getDate()
+  ).padStart(2, "0");
+
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
 export function getToday() {
   const today = new Date();
   today.setHours(12, 0, 0, 0);

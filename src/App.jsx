@@ -12,6 +12,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 
 import CheckInPage from "./pages/CheckInPage";
 import DashboardPage from "./pages/DashboardPage";
+import GiftCardsPage from "./pages/GiftCardsPage";
 import LoginPage from "./pages/LoginPage";
 import MembersPage from "./pages/MembersPage";
 import RevenuePage from "./pages/RevenuePage";
@@ -56,6 +57,11 @@ function App() {
             <Route
               path="/members"
               element={<MembersPage />}
+            />
+
+            <Route
+              path="/gift-cards"
+              element={<GiftCardsPage />}
             />
 
             <Route
